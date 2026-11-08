@@ -7,6 +7,7 @@ import { SearchHarvest } from './components/SearchHarvest';
 import { Bookshelf } from './components/Bookshelf';
 import { InAppReader } from './components/InAppReader';
 import { AISummaryModal } from './components/AISummaryModal';
+import { OfflineApkBanner } from './components/OfflineApkBanner';
 
 export const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -124,6 +125,11 @@ export const App: React.FC = () => {
             onExplore={() => setActiveTab('harvest')}
           />
         )}
+
+        {/* Offline Mobile APK Showcase Section */}
+        <div className="mt-10 sm:mt-14">
+          <OfflineApkBanner />
+        </div>
       </main>
 
       {/* In-App PDF Reader Modal */}
