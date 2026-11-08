@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { 
   Search, 
-  Sparkles, 
   FolderCheck, 
   FolderPlus, 
   FileSpreadsheet, 
@@ -23,6 +22,9 @@ interface SearchHarvestProps {
   onOpenSummary: (paper: Paper) => void;
   onReadPaper: (paper: Paper) => void;
   onToggleBookmark: (paper: Paper) => void;
+  onSelectPaper?: (paper: Paper) => void;
+  onHarvested?: (papers: Paper[]) => void;
+  selectedPaperId?: string;
   bookmarkedIds: Set<string>;
   targetDirHandle: any;
   onSelectTargetDir?: () => void;
@@ -40,6 +42,9 @@ export const SearchHarvest: React.FC<SearchHarvestProps> = ({
   onOpenSummary,
   onReadPaper,
   onToggleBookmark,
+  onSelectPaper,
+  onHarvested,
+  selectedPaperId,
   bookmarkedIds,
   targetDirHandle,
 }) => {
@@ -52,7 +57,6 @@ export const SearchHarvest: React.FC<SearchHarvestProps> = ({
   const [downloadingZip, setDownloadingZip] = useState<boolean>(false);
   const [harvestProgress, setHarvestProgress] = useState<{ current: number; total: number; title: string } | null>(null);
 
-  // Search OpenAlex
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!topic.trim()) return;
@@ -62,14 +66,17 @@ export const SearchHarvest: React.FC<SearchHarvestProps> = ({
     try {
       const { papers: results } = await searchOpenAlex(topic.trim(), fromYear, peerOnly, 1, targetCount);
       setPapers(results);
+      onHarvested?.(results);
+      if (results.length > 0 && onSelectPaper) {
+        onSelectPaper(results[0]);
+      }
 
-      // Trigger celebrate confetti on successful search
       if (results.length > 0) {
         confetti({
-          particleCount: 40,
+          particleCount: 35,
           spread: 60,
           origin: { y: 0.8 },
-          colors: ['#38bdf8', '#818cf8', '#34d399']
+          colors: ['#3d5a49', '#8f6b48', '#22201d']
         });
       }
     } catch (err) {
@@ -79,7 +86,6 @@ export const SearchHarvest: React.FC<SearchHarvestProps> = ({
     }
   };
 
-  // Harvest directly to folder if handle exists, else download ZIP
   const handleHarvestToFolderOrZip = async () => {
     if (papers.length === 0) return;
 
@@ -106,7 +112,6 @@ export const SearchHarvest: React.FC<SearchHarvestProps> = ({
     }
   };
 
-  // Download all as ZIP
   const handleDownloadZip = async () => {
     if (papers.length === 0) return;
     setDownloadingZip(true);
@@ -125,7 +130,6 @@ export const SearchHarvest: React.FC<SearchHarvestProps> = ({
     }
   };
 
-  // Export CSV
   const handleExportCsv = () => {
     if (papers.length === 0) return;
     const csv = generatePaperListCsv(papers);
@@ -133,46 +137,32 @@ export const SearchHarvest: React.FC<SearchHarvestProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `PaperPulse_${topic.slice(0, 30)}_List.csv`;
+    a.download = `THE_SCHOLA_${topic.slice(0, 30)}_List.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-200">
       
-      {/* Hero Header */}
-      <div className="text-center max-w-3xl mx-auto pt-4 pb-2">
-        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-sky-950/80 border border-sky-800/60 text-sky-300 text-xs font-mono mb-4">
-          <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-          <span>Autonomous Literature Discovery & Pre-Read AI</span>
-        </div>
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white">
-          Harvest Research, <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">Read & Summarize</span>
-        </h1>
-        <p className="mt-3 text-sm sm:text-base text-slate-400 max-w-2xl mx-auto">
-          Search millions of open-access papers across IEEE, Elsevier, Springer, and arXiv. Download directly to your laptop or phone, read in-app, and synthesize insights before reading.
-        </p>
-      </div>
-
       {/* Search Input Box */}
-      <div className="max-w-4xl mx-auto rounded-3xl bg-slate-900/90 border border-slate-800 p-4 sm:p-6 shadow-2xl backdrop-blur-xl">
-        <form onSubmit={handleSearch} className="space-y-4">
+      <div className="rounded-2xl bg-white border border-schola-border p-4 sm:p-5 shadow-xs">
+        <form onSubmit={handleSearch} className="space-y-3">
           
           {/* Main Query Input */}
           <div className="relative flex items-center">
-            <Search className="absolute left-4 w-5 h-5 text-slate-400" />
+            <Search className="absolute left-3.5 w-4 h-4 text-schola-muted" />
             <input
               type="text"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              placeholder="Enter research topic, e.g. 'spiking neural network aerospace flight control'..."
-              className="w-full pl-12 pr-32 py-3.5 rounded-2xl bg-slate-950/80 border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm sm:text-base transition"
+              placeholder="Search research topic (e.g. 'spiking neural network aerospace flight control')..."
+              className="w-full pl-10 pr-28 py-2.5 rounded-xl bg-schola-bg border border-schola-border text-schola-text placeholder-schola-muted/70 focus:outline-none focus:ring-1 focus:ring-schola-arc text-xs sm:text-sm font-sans"
             />
             <button
               type="submit"
               disabled={loading}
-              className="absolute right-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white text-xs sm:text-sm font-semibold shadow-lg shadow-sky-500/25 transition cursor-pointer disabled:opacity-50"
+              className="absolute right-1.5 px-4 py-1.5 rounded-lg bg-schola-arc hover:bg-schola-arcHover text-white text-xs font-semibold shadow-2xs transition cursor-pointer disabled:opacity-50"
             >
               {loading ? 'Searching...' : 'Search'}
             </button>
@@ -180,7 +170,7 @@ export const SearchHarvest: React.FC<SearchHarvestProps> = ({
 
           {/* Quick Preset Research Pillars */}
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            <span className="text-xs text-slate-500 font-mono flex items-center space-x-1 mr-1">
+            <span className="text-[11px] text-schola-muted font-mono flex items-center space-x-1 mr-1">
               <Filter className="w-3 h-3" />
               <span>Pillars:</span>
             </span>
@@ -188,14 +178,11 @@ export const SearchHarvest: React.FC<SearchHarvestProps> = ({
               <button
                 key={idx}
                 type="button"
-                onClick={() => {
-                  setTopic(p.query);
-                  // auto-trigger search for preset
-                }}
-                className={`text-[11px] px-2.5 py-1 rounded-lg border transition font-medium cursor-pointer ${
+                onClick={() => setTopic(p.query)}
+                className={`text-[11px] px-2.5 py-1 rounded-md border transition font-medium cursor-pointer ${
                   topic === p.query 
-                    ? 'bg-sky-500/20 border-sky-500/60 text-sky-300' 
-                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                    ? 'bg-schola-arcLight border-schola-arc/30 text-schola-arc' 
+                    : 'bg-schola-panel border-schola-border text-schola-muted hover:text-schola-text'
                 }`}
               >
                 {p.label}
@@ -203,66 +190,58 @@ export const SearchHarvest: React.FC<SearchHarvestProps> = ({
             ))}
           </div>
 
-          {/* Controls: Earliest Year, Count, Peer-Only, Storage routing */}
-          <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs">
-            <div className="flex flex-wrap items-center gap-4">
+          {/* Filters Row */}
+          <div className="pt-2 border-t border-schola-border flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-3">
               
-              {/* Year */}
-              <div className="flex items-center space-x-1.5">
-                <span className="text-slate-400">Year from:</span>
+              <div className="flex items-center space-x-1.5 text-schola-muted">
+                <span>From year:</span>
                 <select
                   value={fromYear}
                   onChange={(e) => setFromYear(Number(e.target.value))}
-                  className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="bg-white border border-schola-border rounded-md px-2 py-0.5 text-schola-text focus:outline-none focus:ring-1 focus:ring-schola-arc"
                 >
                   <option value={2026}>2026 (Latest)</option>
                   <option value={2025}>2025</option>
                   <option value={2024}>2024</option>
                   <option value={2023}>2023</option>
                   <option value={2020}>2020</option>
-                  <option value={2015}>2015</option>
                 </select>
               </div>
 
-              {/* Count */}
-              <div className="flex items-center space-x-1.5">
-                <span className="text-slate-400">Limit:</span>
+              <div className="flex items-center space-x-1.5 text-schola-muted">
+                <span>Limit:</span>
                 <select
                   value={targetCount}
                   onChange={(e) => setTargetCount(Number(e.target.value))}
-                  className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="bg-white border border-schola-border rounded-md px-2 py-0.5 text-schola-text focus:outline-none focus:ring-1 focus:ring-schola-arc"
                 >
-                  <option value={10}>10 papers</option>
-                  <option value={25}>25 papers</option>
-                  <option value={50}>50 papers</option>
-                  <option value={100}>100 papers</option>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
                 </select>
               </div>
 
-              {/* Peer-Reviewed Only */}
-              <label className="flex items-center space-x-2 cursor-pointer select-none">
+              <label className="flex items-center space-x-1.5 text-schola-text cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={peerOnly}
                   onChange={(e) => setPeerOnly(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-sky-500 focus:ring-sky-500 focus:ring-offset-0"
+                  className="w-3.5 h-3.5 rounded border-schola-border text-schola-arc focus:ring-schola-arc"
                 />
-                <span className="text-slate-300">Peer-reviewed only (skip preprints)</span>
+                <span>Peer-reviewed only</span>
               </label>
 
             </div>
 
-            {/* Storage Target Info */}
-            <div className="text-slate-400 flex items-center space-x-1.5">
+            <div className="text-[11px] font-mono text-schola-muted flex items-center space-x-1">
               {targetDirHandle ? (
-                <span className="text-emerald-400 flex items-center space-x-1 font-mono text-[11px]">
-                  <FolderCheck className="w-3.5 h-3.5" />
-                  <span>Saves to: {targetDirHandle.name}</span>
+                <span className="text-emerald-700 flex items-center space-x-1">
+                  <FolderCheck className="w-3 h-3" />
+                  <span>Linked: {targetDirHandle.name}</span>
                 </span>
               ) : (
-                <span className="text-slate-500 flex items-center space-x-1 font-mono text-[11px]">
-                  <span>Device Downloads / ZIP mode</span>
-                </span>
+                <span>Downloads / Mobile ZIP</span>
               )}
             </div>
 
@@ -271,20 +250,20 @@ export const SearchHarvest: React.FC<SearchHarvestProps> = ({
         </form>
       </div>
 
-      {/* Progress Bar (if harvesting/downloading) */}
+      {/* Progress Bar */}
       {harvestProgress && (
-        <div className="max-w-4xl mx-auto p-4 rounded-2xl bg-sky-950/40 border border-sky-800/60 animate-in fade-in">
-          <div className="flex items-center justify-between text-xs mb-2">
-            <span className="font-semibold text-sky-300">
+        <div className="p-3.5 rounded-xl bg-schola-panel border border-schola-border">
+          <div className="flex items-center justify-between text-xs mb-1.5">
+            <span className="font-semibold text-schola-arc">
               Downloading ({harvestProgress.current}/{harvestProgress.total})...
             </span>
-            <span className="font-mono text-slate-400 truncate max-w-xs">
+            <span className="font-mono text-schola-muted truncate max-w-xs text-[11px]">
               {harvestProgress.title}
             </span>
           </div>
-          <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-schola-subtle rounded-full h-1.5 overflow-hidden">
             <div 
-              className="bg-gradient-to-r from-sky-500 to-indigo-500 h-2 rounded-full transition-all duration-300"
+              className="bg-schola-arc h-1.5 rounded-full transition-all duration-300"
               style={{ width: `${(harvestProgress.current / harvestProgress.total) * 100}%` }}
             />
           </div>
@@ -293,45 +272,41 @@ export const SearchHarvest: React.FC<SearchHarvestProps> = ({
 
       {/* Results Header & Bulk Actions */}
       {papers.length > 0 && (
-        <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3 pt-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
           <div>
-            <h2 className="text-lg font-bold text-slate-100 flex items-center space-x-2">
-              <Layers className="w-5 h-5 text-sky-400" />
-              <span>Discovered Papers ({papers.length})</span>
+            <h2 className="font-serif text-lg font-bold text-schola-text flex items-center space-x-2">
+              <Layers className="w-4 h-4 text-schola-arc" />
+              <span>Harvested Papers ({papers.length})</span>
             </h2>
-            <p className="text-xs text-slate-400">
-              Filtered for legal open-access PDFs matching "{topic}"
+            <p className="text-[11px] text-schola-muted">
+              Matching open-access literature from OpenAlex global database
             </p>
           </div>
 
           <div className="flex items-center space-x-2">
-            
-            {/* Download Folder / ZIP */}
             <button
               onClick={handleHarvestToFolderOrZip}
               disabled={loading || downloadingZip}
-              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-semibold shadow-md shadow-sky-500/20 transition cursor-pointer"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-schola-arc hover:bg-schola-arcHover text-white text-xs font-semibold shadow-2xs transition cursor-pointer"
             >
               {targetDirHandle ? <FolderPlus className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
               <span>{targetDirHandle ? 'Save All to Folder' : 'Download All as ZIP'}</span>
             </button>
 
-            {/* Export CSV */}
             <button
               onClick={handleExportCsv}
-              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium transition cursor-pointer"
-              title="Export Paper List.csv for reference managers"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-schola-subtle border border-schola-border text-schola-text text-xs font-medium transition cursor-pointer"
+              title="Export Paper List.csv"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">Export CSV</span>
+              <FileSpreadsheet className="w-3.5 h-3.5 text-schola-muted" />
+              <span>Export CSV</span>
             </button>
-
           </div>
         </div>
       )}
 
       {/* Papers Grid */}
-      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-3.5">
         {papers.map((paper, idx) => (
           <PaperCard
             key={paper.id}
@@ -340,6 +315,8 @@ export const SearchHarvest: React.FC<SearchHarvestProps> = ({
             onOpenSummary={onOpenSummary}
             onReadPaper={onReadPaper}
             onToggleBookmark={onToggleBookmark}
+            onSelectPaper={onSelectPaper}
+            isSelected={selectedPaperId === paper.id}
             isBookmarked={bookmarkedIds.has(paper.id)}
           />
         ))}

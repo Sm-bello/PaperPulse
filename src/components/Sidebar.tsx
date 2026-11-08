@@ -1,0 +1,152 @@
+import React, { useState } from 'react';
+import { 
+  Folder, 
+  FolderPlus, 
+  RefreshCw, 
+  ChevronRight, 
+  ChevronDown, 
+  LayoutGrid, 
+  Smartphone
+} from 'lucide-react';
+import type { Paper } from '../types';
+
+interface SidebarProps {
+  activeFolder: string;
+  onSelectFolder: (folder: string) => void;
+  targetDirHandle: any;
+  onSelectTargetDir: () => void;
+  savedPapers: Paper[];
+  harvestedPapers: Paper[];
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({
+  activeFolder,
+  onSelectFolder,
+  targetDirHandle,
+  onSelectTargetDir,
+  savedPapers,
+  harvestedPapers,
+}) => {
+  const [collapsed, setCollapsed] = useState(false);
+
+  const folders = [
+    { name: "Unlinked Papers", count: harvestedPapers.length || 15 },
+    { name: "Landing Gear Digital Twin", count: 12 },
+    { name: "Neuromorphic SNN PHM", count: 8 },
+    { name: "Rotating Detonation Engine", count: 14 },
+    { name: "Avionics Blockchain ADS-B", count: 9 },
+    { name: "Decentralized UAV Swarms", count: 7 },
+    { name: "My Saved Shelf", count: savedPapers.length },
+    { name: "Thermal Proteome Profiling", count: 0 },
+    { name: "RNA-Seq Differential Expr...", count: 0 },
+    { name: "Cancer Genomics", count: 0 },
+    { name: "Grants & Proposals", count: 0 },
+  ];
+
+  if (collapsed) {
+    return (
+      <aside className="w-12 border-r border-schola-border bg-schola-panel flex flex-col items-center py-4 space-y-4">
+        <button 
+          onClick={() => setCollapsed(false)}
+          className="p-1.5 rounded-lg text-schola-muted hover:text-schola-text hover:bg-schola-subtle transition"
+          title="Expand Folder Tree"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </aside>
+    );
+  }
+
+  return (
+    <aside className="w-64 sm:w-68 border-r border-schola-border bg-schola-panel flex flex-col justify-between select-none">
+      
+      {/* Top Header Controls */}
+      <div>
+        <div className="h-11 px-3 border-b border-schola-border flex items-center justify-between text-schola-muted">
+          <div className="flex items-center space-x-1.5">
+            <button 
+              onClick={() => onSelectFolder("All")}
+              className="p-1 hover:text-schola-text transition"
+              title="All Collections"
+            >
+              <Folder className="w-4 h-4" />
+            </button>
+            <button className="p-1 hover:text-schola-text transition" title="Layout View">
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={onSelectTargetDir}
+              className="p-1 hover:text-schola-text transition" 
+              title="Link Local Folder"
+            >
+              <FolderPlus className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex items-center space-x-1">
+            <button 
+              onClick={() => window.location.reload()}
+              className="p-1 hover:text-schola-text transition" 
+              title="Refresh"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              onClick={() => setCollapsed(true)}
+              className="p-1 hover:text-schola-text transition"
+              title="Collapse Sidebar"
+            >
+              <ChevronDown className="w-4 h-4 rotate-90" />
+            </button>
+          </div>
+        </div>
+
+        {/* Folder List */}
+        <div className="p-2 space-y-0.5 overflow-y-auto max-h-[calc(100vh-14rem)] text-xs">
+          {folders.map((f, idx) => {
+            const isActive = activeFolder === f.name;
+            return (
+              <button
+                key={idx}
+                onClick={() => onSelectFolder(f.name)}
+                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left transition group ${
+                  isActive 
+                    ? 'bg-schola-subtle text-schola-text font-medium shadow-2xs' 
+                    : 'text-schola-muted hover:bg-schola-subtle/60 hover:text-schola-text'
+                }`}
+              >
+                <div className="flex items-center space-x-2 truncate">
+                  <span className="text-[10px] text-schola-lightMuted font-mono">›</span>
+                  <Folder className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-schola-arc' : 'text-schola-muted/80'}`} />
+                  <span className="truncate">{f.name}</span>
+                </div>
+                <span className="text-[10px] font-mono text-schola-lightMuted group-hover:text-schola-muted">
+                  {f.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Bottom Folder Linking & Mobile Offline Pill */}
+      <div className="p-3 border-t border-schola-border bg-schola-panel/80 space-y-2">
+        <button
+          onClick={onSelectTargetDir}
+          className="w-full flex items-center justify-center space-x-1.5 py-1.5 text-xs text-schola-muted hover:text-schola-text transition border border-schola-border rounded-lg bg-white/60 hover:bg-white cursor-pointer font-sans"
+        >
+          <span>{targetDirHandle ? `Connected: ${targetDirHandle.name}` : 'Link Library Folder'}</span>
+        </button>
+
+        <div className="flex items-center justify-between text-[11px] text-schola-muted font-mono pt-1">
+          <span className="flex items-center space-x-1">
+            <Smartphone className="w-3 h-3 text-schola-arc" />
+            <span>Android APK Ready</span>
+          </span>
+          <span className="text-emerald-700 font-semibold">100% Offline</span>
+        </div>
+      </div>
+
+    </aside>
+  );
+};

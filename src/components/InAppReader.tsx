@@ -8,31 +8,36 @@ import {
   Sun, 
   Eye, 
   Bookmark, 
-  AlertCircle
+  Printer, 
+  RotateCw, 
+  ZoomIn, 
+  ZoomOut, 
+  Menu,
+  Maximize2
 } from 'lucide-react';
 import type { Paper, AISummary } from '../types';
 import { downloadSinglePaper } from '../services/downloader';
 
 interface InAppReaderProps {
   paper: Paper;
-  summary: AISummary | null;
+  summary?: AISummary | null;
   onBack: () => void;
   onBookmark: (paper: Paper) => void;
   isBookmarked: boolean;
+  onOpenSummaryModal?: () => void;
 }
 
 export const InAppReader: React.FC<InAppReaderProps> = ({
   paper,
-  summary,
   onBack,
   onBookmark,
   isBookmarked,
+  onOpenSummaryModal,
 }) => {
-  const [readerTheme, setReaderTheme] = useState<'normal' | 'dark' | 'sepia'>('dark');
-  const [showSummaryDrawer, setShowSummaryDrawer] = useState(true);
+  const [readerTheme, setReaderTheme] = useState<'normal' | 'dark' | 'sepia'>('normal');
+  const [zoomLevel, setZoomLevel] = useState<number>(85);
   const [downloading, setDownloading] = useState(false);
 
-  // PDF display URL (direct or via PDF preview viewer)
   const pdfUrl = paper.pdfUrl || paper.landingPageUrl || "";
 
   const handleDownload = async () => {
@@ -46,208 +51,210 @@ export const InAppReader: React.FC<InAppReaderProps> = ({
       case 'dark':
         return 'filter invert-[0.92] hue-rotate-180 contrast-125 bg-slate-900';
       case 'sepia':
-        return 'filter sepia-[0.4] brightness-[0.95] contrast-[0.95] bg-[#fbf0d9]';
+        return 'filter sepia-[0.35] brightness-[0.95] contrast-[0.95] bg-[#faf3e8]';
       default:
         return 'bg-white';
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-slate-100 animate-in fade-in duration-150">
+    <div className="flex-1 flex flex-col h-full bg-schola-bg relative select-none">
       
-      {/* Top Header Toolbar */}
-      <header className="h-14 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between">
-        
-        {/* Back and Title */}
-        <div className="flex items-center space-x-3 overflow-hidden">
-          <button
-            onClick={onBack}
-            className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Back</span>
-          </button>
+      {/* Background Watermark (THE SCHOLA) */}
+      <div 
+        className="absolute inset-0 bg-no-repeat bg-center bg-contain opacity-[0.032] pointer-events-none"
+        style={{ backgroundImage: `url('/logo.png')` }}
+      />
 
-          <div className="truncate">
-            <h2 className="text-xs sm:text-sm font-semibold text-slate-100 truncate max-w-xs sm:max-w-md lg:max-w-lg">
-              {paper.title}
-            </h2>
-            <p className="text-[11px] text-slate-400 font-mono truncate hidden sm:block">
-              {paper.authors.join(", ")} • {paper.publicationYear} • {paper.venue}
-            </p>
-          </div>
+      {/* Document Tab Header (Matching Image 2) */}
+      <div className="h-9 px-4 border-b border-schola-border bg-schola-panel/60 flex items-center justify-between text-xs text-schola-muted">
+        <div className="flex items-center space-x-2 truncate">
+          <button 
+            onClick={onBack}
+            className="p-1 rounded hover:text-schola-text hover:bg-schola-subtle transition"
+            title="Back to Harvest"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+          </button>
+          <span className="font-serif font-medium text-schola-text truncate max-w-md lg:max-w-xl">
+            {paper.title}
+          </span>
         </div>
 
-        {/* Reader Controls */}
-        <div className="flex items-center space-x-1.5 sm:space-x-2">
+        <div className="flex items-center space-x-2 shrink-0">
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-schola-subtle text-schola-muted">
+            {paper.venue}
+          </span>
+        </div>
+      </div>
+
+      {/* PDF Sub-Toolbar (Matching Image 2: [三 Name 1/27 - 85% + [] ↺ ⬇ 🖨 ⋮]) */}
+      <div className="h-10 px-4 bg-[#23272d] text-slate-300 flex items-center justify-between text-xs select-none shadow-xs">
+        
+        {/* Left Toolbar Items */}
+        <div className="flex items-center space-x-3 truncate">
+          <button className="text-slate-400 hover:text-white transition">
+            <Menu className="w-4 h-4" />
+          </button>
+          <span className="font-sans text-xs text-slate-200 truncate max-w-[180px] sm:max-w-xs">
+            {paper.title.slice(0, 35)}...
+          </span>
+          <span className="text-slate-400 font-mono text-[11px] hidden sm:inline">
+            1 / 27
+          </span>
+        </div>
+
+        {/* Center Zoom Controls */}
+        <div className="flex items-center space-x-2 text-xs font-mono">
+          <button 
+            onClick={() => setZoomLevel(Math.max(50, zoomLevel - 15))}
+            className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
+            title="Zoom out"
+          >
+            <ZoomOut className="w-3.5 h-3.5" />
+          </button>
+          <span className="w-10 text-center text-slate-300 text-[11px]">{zoomLevel}%</span>
+          <button 
+            onClick={() => setZoomLevel(Math.min(150, zoomLevel + 15))}
+            className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
+            title="Zoom in"
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
+          </button>
+          <button 
+            onClick={() => setZoomLevel(100)}
+            className="p-1 text-slate-400 hover:text-white transition hidden sm:inline cursor-pointer"
+            title="Fit to window"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+          </button>
+          <button 
+            className="p-1 text-slate-400 hover:text-white transition hidden sm:inline"
+            title="Rotate"
+          >
+            <RotateCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Right Action Tools */}
+        <div className="flex items-center space-x-2">
           
-          {/* Reader Theme Toggle */}
-          <div className="flex items-center bg-slate-800/80 rounded-lg p-0.5 border border-slate-700 text-xs">
+          {/* Eye-Care & Dark Theme Selector */}
+          <div className="flex items-center bg-slate-800 rounded-md p-0.5 text-xs mr-1">
             <button
-              onClick={() => setReaderTheme('dark')}
-              title="Night Dark Mode"
-              className={`p-1.5 rounded-md transition ${readerTheme === 'dark' ? 'bg-sky-500 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+              onClick={() => setReaderTheme('normal')}
+              className={`p-1 rounded ${readerTheme === 'normal' ? 'bg-slate-700 text-white' : 'text-slate-400'}`}
+              title="Standard Light"
             >
-              <Moon className="w-3.5 h-3.5" />
+              <Sun className="w-3 h-3" />
             </button>
             <button
               onClick={() => setReaderTheme('sepia')}
-              title="Sepia Eye-Care Mode"
-              className={`p-1.5 rounded-md transition ${readerTheme === 'sepia' ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`p-1 rounded ${readerTheme === 'sepia' ? 'bg-amber-800 text-amber-100' : 'text-slate-400'}`}
+              title="Eye-care Sepia"
             >
-              <Eye className="w-3.5 h-3.5" />
+              <Eye className="w-3 h-3" />
             </button>
             <button
-              onClick={() => setReaderTheme('normal')}
-              title="Standard Light Mode"
-              className={`p-1.5 rounded-md transition ${readerTheme === 'normal' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+              onClick={() => setReaderTheme('dark')}
+              className={`p-1 rounded ${readerTheme === 'dark' ? 'bg-slate-900 text-sky-300' : 'text-slate-400'}`}
+              title="Night Dark"
             >
-              <Sun className="w-3.5 h-3.5" />
+              <Moon className="w-3 h-3" />
             </button>
           </div>
 
-          {/* Toggle AI Summary Drawer */}
-          {summary && (
+          {/* ARC Action Pill */}
+          {onOpenSummaryModal && (
             <button
-              onClick={() => setShowSummaryDrawer(!showSummaryDrawer)}
-              title="Toggle AI Sidekick Summary"
-              className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer ${
-                showSummaryDrawer 
-                  ? 'bg-sky-500/20 border-sky-500/40 text-sky-300' 
-                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
-              }`}
+              onClick={onOpenSummaryModal}
+              className="flex items-center space-x-1 px-2.5 py-1 rounded bg-schola-arc hover:bg-schola-arcHover text-white text-[11px] font-semibold transition cursor-pointer"
+              title="Open ARC AI Synthesis"
             >
-              <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-              <span className="hidden md:inline">AI Notes</span>
+              <Sparkles className="w-3 h-3" />
+              <span className="hidden sm:inline">ARC Notes</span>
             </button>
           )}
-
-          {/* Bookmark */}
-          <button
-            onClick={() => onBookmark(paper)}
-            className={`p-1.5 rounded-lg border transition ${
-              isBookmarked 
-                ? 'bg-sky-500/20 border-sky-500/50 text-sky-400' 
-                : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Bookmark className="w-4 h-4 fill-current" />
-          </button>
 
           {/* Download */}
           <button
             onClick={handleDownload}
             disabled={downloading}
-            className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium transition cursor-pointer"
+            className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
+            title="Download PDF"
           >
             <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Save</span>
           </button>
 
-          {/* Open External */}
+          {/* Print */}
+          <button
+            onClick={() => window.print()}
+            className="p-1 text-slate-400 hover:text-white transition hidden sm:inline"
+            title="Print"
+          >
+            <Printer className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Bookmark */}
+          <button
+            onClick={() => onBookmark(paper)}
+            className={`p-1 text-slate-400 hover:text-white transition ${isBookmarked ? 'text-amber-400' : ''}`}
+            title={isBookmarked ? "Bookmarked" : "Bookmark"}
+          >
+            <Bookmark className="w-3.5 h-3.5 fill-current" />
+          </button>
+
+          {/* External tab */}
           {pdfUrl && (
             <a
               href={pdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-slate-200 transition"
-              title="Open direct PDF URL in new tab"
+              className="p-1 text-slate-400 hover:text-white transition"
+              title="Open in external browser tab"
             >
-              <ExternalLink className="w-4 h-4" />
+              <ExternalLink className="w-3.5 h-3.5" />
             </a>
           )}
 
         </div>
-      </header>
 
-      {/* Main Split Body: PDF View + AI Notes Drawer */}
-      <div className="flex-1 flex overflow-hidden relative">
-        
-        {/* PDF Frame */}
-        <div className="flex-1 h-full w-full bg-slate-950 relative flex items-center justify-center overflow-hidden">
-          {pdfUrl ? (
+      </div>
+
+      {/* Main Document Frame */}
+      <div className="flex-1 w-full h-full bg-[#525659] relative flex items-center justify-center overflow-auto p-2 sm:p-4">
+        {pdfUrl ? (
+          <div 
+            className="w-full h-full max-w-4xl bg-white shadow-2xl rounded-sm overflow-hidden transition-all duration-300"
+            style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
+          >
             <iframe
               src={pdfUrl}
               title={paper.title}
               className={`w-full h-full border-none transition-all duration-300 ${getViewerStyle()}`}
             />
-          ) : (
-            <div className="text-center p-8 max-w-md">
-              <AlertCircle className="w-12 h-12 text-amber-400 mx-auto mb-3" />
-              <h3 className="text-base font-semibold text-slate-200 mb-1">Direct PDF Preview Blocked</h3>
-              <p className="text-xs text-slate-400 mb-4">
-                Some publisher domains enforce strict frame blocking. You can still open the paper directly or read the synthesized AI summary.
-              </p>
-              {paper.landingPageUrl && (
-                <a
-                  href={paper.landingPageUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-medium shadow-md transition"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Open via Publisher Portal</span>
-                </a>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* AI Summary Side Drawer */}
-        {summary && showSummaryDrawer && (
-          <aside className="w-full sm:w-80 md:w-96 border-l border-slate-800 bg-slate-900/95 backdrop-blur-md flex flex-col h-full z-20 overflow-y-auto p-4 space-y-4 animate-in slide-in-from-right duration-200">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <div className="flex items-center space-x-1.5">
-                <Sparkles className="w-4 h-4 text-sky-400" />
-                <h3 className="text-xs uppercase font-mono font-bold text-sky-400">
-                  AI Reading Assistant
-                </h3>
-              </div>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
-                {summary.mode}
-              </span>
-            </div>
-
-            {/* TL;DR */}
-            <div className="p-3 rounded-xl bg-sky-950/40 border border-sky-800/40 text-xs">
-              <h4 className="font-semibold text-sky-300 mb-1.5 font-mono text-[11px]">💡 Quick Takeaway</h4>
-              <ul className="space-y-1 text-slate-300">
-                {summary.tldr.map((bullet, i) => (
-                  <li key={i} className="flex items-start space-x-1.5">
-                    <span className="text-sky-400">•</span>
-                    <span>{bullet}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Core Objective */}
-            <div className="text-xs space-y-1">
-              <h4 className="font-mono font-semibold text-slate-400 uppercase text-[10px]">🎯 Core Problem</h4>
-              <p className="text-slate-300 leading-relaxed">{summary.coreThesis}</p>
-            </div>
-
-            {/* Methodology */}
-            <div className="text-xs space-y-1">
-              <h4 className="font-mono font-semibold text-slate-400 uppercase text-[10px]">🔬 Technical Method</h4>
-              <p className="text-slate-300 leading-relaxed">{summary.methodology}</p>
-            </div>
-
-            {/* Key Findings */}
-            <div className="text-xs space-y-1">
-              <h4 className="font-mono font-semibold text-emerald-400 uppercase text-[10px]">📊 Breakthrough Results</h4>
-              <p className="text-slate-300 leading-relaxed">{summary.keyFindings}</p>
-            </div>
-
-            {/* Limitations */}
-            <div className="text-xs space-y-1">
-              <h4 className="font-mono font-semibold text-amber-400 uppercase text-[10px]">⚠️ Known Limitations</h4>
-              <p className="text-slate-400 leading-relaxed">{summary.limitations}</p>
-            </div>
-          </aside>
+          </div>
+        ) : (
+          <div className="text-center p-8 max-w-md bg-white rounded-xl shadow-lg border border-schola-border">
+            <h3 className="font-serif text-lg font-bold text-schola-text mb-2">Direct Viewer Unavailable</h3>
+            <p className="text-xs text-schola-muted mb-4">
+              Some publishers restrict iframe embedding. You can read the synthesized ARC AI Summary or open via the publisher portal.
+            </p>
+            {paper.landingPageUrl && (
+              <a
+                href={paper.landingPageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-schola-arc hover:bg-schola-arcHover text-white text-xs font-semibold shadow-xs transition"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Open via Publisher Portal</span>
+              </a>
+            )}
+          </div>
         )}
-
       </div>
+
     </div>
   );
 };

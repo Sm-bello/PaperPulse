@@ -3,12 +3,12 @@ import {
   X, 
   Sparkles, 
   Cpu, 
-  CheckCircle2, 
   Copy, 
   BookOpen, 
   AlertTriangle, 
   RefreshCw,
-  Zap
+  Zap,
+  Check
 } from 'lucide-react';
 import type { Paper, AISummary } from '../types';
 import { getPaperSummary } from '../services/aiSummarizer';
@@ -51,7 +51,7 @@ ${summary.keyFindings}
 Limitations:
 ${summary.limitations}
 
-Generated via PaperPulse AI (${summary.mode} mode)`;
+Generated via THE SCHOLA / PaperPulse ARC AI (${summary.mode} mode)`;
 
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -71,83 +71,89 @@ Generated via PaperPulse AI (${summary.mode} mode)`;
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150 select-none">
+      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-white border border-schola-border shadow-2xl overflow-hidden">
         
+        {/* Subtle Watermark */}
+        <div 
+          className="absolute inset-0 bg-no-repeat bg-center bg-contain opacity-[0.03] pointer-events-none"
+          style={{ backgroundImage: `url('/logo.png')` }}
+        />
+
         {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-800 bg-slate-900/60">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center border border-sky-500/30">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-schola-border bg-schola-panel relative z-10">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-lg bg-schola-arcLight text-schola-arc flex items-center justify-center border border-schola-arc/20">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-slate-100 flex items-center space-x-2">
-                <span>Pre-Read AI Executive Summary</span>
+              <h3 className="font-serif text-base font-bold text-schola-text">
+                ARC AI Executive Paper Synthesis
               </h3>
-              <p className="text-xs text-slate-400 font-mono">
-                Analyze before reading · Generated at {summary?.generatedAt || "just now"}
+              <p className="text-[11px] text-schola-muted font-mono">
+                THE SCHOLA Intelligence · Synthesized at {summary?.generatedAt || "just now"}
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+            className="p-1.5 rounded-lg text-schola-muted hover:text-schola-text hover:bg-schola-subtle transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Paper Metadata Banner */}
-        <div className="px-5 py-3 bg-slate-950/50 border-b border-slate-800/80 text-xs">
-          <h4 className="font-semibold text-slate-200 line-clamp-2">{paper.title}</h4>
-          <div className="flex flex-wrap items-center gap-2 mt-1 text-slate-400">
+        <div className="px-5 py-3 bg-schola-bg border-b border-schola-border text-xs relative z-10">
+          <h4 className="font-serif font-bold text-schola-text leading-snug line-clamp-2">{paper.title}</h4>
+          <div className="flex flex-wrap items-center gap-2 mt-1 text-schola-muted">
             <span>{paper.authors.slice(0, 3).join(", ")}</span>
             <span>•</span>
-            <span className="text-sky-400 font-medium">{paper.venue}</span>
+            <span className="text-schola-arc font-medium font-serif">{paper.venue}</span>
             <span>•</span>
             <span className="font-mono">{paper.publicationYear}</span>
           </div>
         </div>
 
         {/* Body Content */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4 text-sm">
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs sm:text-sm relative z-10">
           
           {loading ? (
             <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
-              <RefreshCw className="w-8 h-8 text-sky-400 animate-spin" />
-              <p className="text-slate-300 font-medium">Synthesizing deep paper analysis...</p>
-              <p className="text-xs text-slate-500">Parsing abstract, technical claims, and quantitative metrics.</p>
+              <RefreshCw className="w-8 h-8 text-schola-arc animate-spin" />
+              <p className="font-serif text-base font-bold text-schola-text">Synthesizing deep paper analysis...</p>
+              <p className="text-xs text-schola-muted">Parsing technical claims, methodology equations, and experimental metrics.</p>
             </div>
           ) : summary ? (
             <>
               {/* Mode Pill & Quick Toggle */}
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 text-xs">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-schola-panel border border-schola-border text-xs">
                 <div className="flex items-center space-x-2">
                   {summary.mode === 'online' ? (
-                    <span className="flex items-center space-x-1.5 px-2 py-0.5 rounded-md bg-emerald-950/60 text-emerald-400 border border-emerald-800/50 font-mono">
+                    <span className="flex items-center space-x-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono text-[11px]">
                       <Zap className="w-3 h-3" />
                       <span>Online (Gemini 2.5 Flash)</span>
                     </span>
                   ) : (
-                    <span className="flex items-center space-x-1.5 px-2 py-0.5 rounded-md bg-amber-950/60 text-amber-400 border border-amber-800/50 font-mono">
+                    <span className="flex items-center space-x-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-mono text-[11px]">
                       <Cpu className="w-3 h-3" />
                       <span>Offline Edge Engine</span>
                     </span>
                   )}
-                  <span className="text-slate-500 hidden sm:inline">Zero-data cache ready</span>
+                  <span className="text-schola-muted hidden sm:inline text-[11px]">Zero-data cached</span>
                 </div>
 
                 <div className="flex items-center space-x-1">
                   <button
                     onClick={() => handleRegenerate('online')}
-                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-[11px]"
+                    className="px-2 py-1 rounded bg-white hover:bg-schola-subtle border border-schola-border text-schola-text transition text-[11px] cursor-pointer"
                   >
                     Gemini Mode
                   </button>
                   <button
                     onClick={() => handleRegenerate('offline')}
-                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-[11px]"
+                    className="px-2 py-1 rounded bg-white hover:bg-schola-subtle border border-schola-border text-schola-text transition text-[11px] cursor-pointer"
                   >
                     Offline NLP
                   </button>
@@ -155,14 +161,15 @@ Generated via PaperPulse AI (${summary.mode} mode)`;
               </div>
 
               {/* 💡 TL;DR Box */}
-              <div className="p-4 rounded-xl bg-gradient-to-r from-sky-950/30 to-indigo-950/20 border border-sky-800/40">
-                <h5 className="font-semibold text-sky-300 flex items-center space-x-1.5 text-xs uppercase tracking-wider mb-2 font-mono">
-                  <span>💡 Executive TL;DR</span>
+              <div className="p-4 rounded-xl bg-schola-arcLight border border-schola-arc/20">
+                <h5 className="font-mono text-schola-arc font-bold text-xs uppercase tracking-wider mb-2 flex items-center space-x-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Executive TL;DR</span>
                 </h5>
-                <ul className="space-y-1.5 text-slate-200 text-xs sm:text-sm">
+                <ul className="space-y-1.5 text-schola-text text-xs leading-relaxed">
                   {summary.tldr.map((bullet, i) => (
                     <li key={i} className="flex items-start space-x-2">
-                      <span className="text-sky-400 mt-1">•</span>
+                      <span className="text-schola-arc font-bold">•</span>
                       <span>{bullet}</span>
                     </li>
                   ))}
@@ -171,65 +178,65 @@ Generated via PaperPulse AI (${summary.mode} mode)`;
 
               {/* 🎯 Core Thesis */}
               <div className="space-y-1">
-                <h5 className="text-xs uppercase font-mono font-semibold text-slate-400 tracking-wider">
+                <h5 className="font-mono text-[10px] uppercase font-bold text-schola-muted tracking-wider">
                   🎯 Core Objective & Problem Solved
                 </h5>
-                <p className="text-slate-300 leading-relaxed text-xs sm:text-sm">
+                <p className="text-schola-text leading-relaxed text-xs">
                   {summary.coreThesis}
                 </p>
               </div>
 
               {/* 🔬 Methodology */}
               <div className="space-y-1">
-                <h5 className="text-xs uppercase font-mono font-semibold text-slate-400 tracking-wider">
-                  🔬 Methodology & Technical Setup
+                <h5 className="font-mono text-[10px] uppercase font-bold text-schola-muted tracking-wider">
+                  🔬 Technical Architecture & Methodology
                 </h5>
-                <p className="text-slate-300 leading-relaxed text-xs sm:text-sm">
+                <p className="text-schola-text leading-relaxed text-xs">
                   {summary.methodology}
                 </p>
               </div>
 
               {/* 📊 Key Findings */}
               <div className="space-y-1">
-                <h5 className="text-xs uppercase font-mono font-semibold text-emerald-400 tracking-wider">
-                  📊 Key Quantitative Breakthroughs
+                <h5 className="font-mono text-[10px] uppercase font-bold text-schola-arc tracking-wider">
+                  📊 Key Quantitative Findings
                 </h5>
-                <p className="text-slate-300 leading-relaxed text-xs sm:text-sm">
+                <p className="text-schola-text leading-relaxed text-xs">
                   {summary.keyFindings}
                 </p>
               </div>
 
               {/* ⚠️ Limitations */}
               <div className="space-y-1">
-                <h5 className="text-xs uppercase font-mono font-semibold text-amber-400 tracking-wider flex items-center space-x-1">
+                <h5 className="font-mono text-[10px] uppercase font-bold text-amber-800 tracking-wider flex items-center space-x-1">
                   <AlertTriangle className="w-3.5 h-3.5" />
                   <span>Operational Limitations</span>
                 </h5>
-                <p className="text-slate-400 leading-relaxed text-xs sm:text-sm">
+                <p className="text-schola-muted leading-relaxed text-xs">
                   {summary.limitations}
                 </p>
               </div>
             </>
           ) : (
-            <p className="text-slate-400 text-center py-6">No summary generated.</p>
+            <p className="text-schola-muted text-center py-6">No summary available.</p>
           )}
 
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900/60 flex items-center justify-between">
+        <div className="p-4 border-t border-schola-border bg-schola-panel flex items-center justify-between relative z-10">
           <button
             onClick={handleCopy}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 transition"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-schola-border bg-white hover:bg-schola-subtle text-xs font-medium text-schola-text transition cursor-pointer"
           >
-            {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-schola-arc" /> : <Copy className="w-3.5 h-3.5" />}
             <span>{copied ? 'Copied' : 'Copy Summary'}</span>
           </button>
 
           <div className="flex items-center space-x-2">
             <button
               onClick={onClose}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium text-schola-muted hover:text-schola-text transition cursor-pointer"
             >
               Close
             </button>
@@ -238,7 +245,7 @@ Generated via PaperPulse AI (${summary.mode} mode)`;
                 onClose();
                 onReadPaper(paper);
               }}
-              className="flex items-center space-x-1.5 px-4 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-white text-xs font-medium shadow-md shadow-sky-500/20 transition cursor-pointer"
+              className="flex items-center space-x-1.5 px-4 py-1.5 rounded-lg bg-schola-arc hover:bg-schola-arcHover text-white text-xs font-semibold shadow-2xs transition cursor-pointer"
             >
               <BookOpen className="w-3.5 h-3.5" />
               <span>Read Full Paper</span>

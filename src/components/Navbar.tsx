@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, 
-  FolderCheck, 
-  FolderPlus, 
-  Wifi, 
-  WifiOff, 
+  Home, 
+  Rss, 
+  BookOpen, 
+  FileText, 
+  FlaskConical, 
+  Settings, 
+  Bell, 
   LogIn, 
   LogOut, 
-  Bookmark, 
-  Layers,
+  Wifi, 
+  WifiOff,
   Smartphone
 } from 'lucide-react';
 import type { UserProfile } from '../types';
@@ -16,10 +19,11 @@ import { signInWithGoogle, logOut } from '../services/firebase';
 
 interface NavbarProps {
   user: UserProfile | null;
-  activeTab: 'harvest' | 'shelf' | 'reader';
-  setActiveTab: (tab: 'harvest' | 'shelf' | 'reader') => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
   targetDirHandle: any;
   onSelectTargetDir: () => void;
+  onOpenArcAI: () => void;
   savedCount: number;
 }
 
@@ -27,9 +31,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   user,
   activeTab,
   setActiveTab,
-  targetDirHandle,
-  onSelectTargetDir,
-  savedCount
+  onOpenArcAI,
+  savedCount,
 }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -46,165 +49,152 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <header className="h-14 border-b border-schola-border bg-schola-panel px-3 sm:px-5 flex items-center justify-between select-none">
+      
+      {/* Left: Window Dots & Logo */}
+      <div className="flex items-center space-x-3.5">
         
-        {/* Brand */}
-        <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('harvest')}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/25 ring-1 ring-sky-400/30">
-            <Sparkles className="w-5 h-5 text-white animate-pulse" />
+        {/* macOS Window Controls */}
+        <div className="flex items-center space-x-1.5">
+          <span className="w-3 h-3 rounded-full bg-[#ff5f56] inline-block shadow-2xs cursor-pointer" />
+          <span className="w-3 h-3 rounded-full bg-[#ffbd2e] inline-block shadow-2xs cursor-pointer" />
+          <span className="w-3 h-3 rounded-full bg-[#27c93f] inline-block shadow-2xs cursor-pointer" />
+        </div>
+
+        {/* Brand Logo (THE SCHOLA) */}
+        <div 
+          onClick={() => setActiveTab('Library')}
+          className="flex items-center space-x-2.5 cursor-pointer pl-1 group"
+        >
+          <div className="w-7 h-7 rounded-md bg-white border border-schola-border shadow-2xs flex items-center justify-center overflow-hidden p-0.5">
+            <img src="/logo.png" alt="THE SCHOLA" className="w-full h-full object-contain" />
           </div>
           <div>
-            <div className="flex items-center space-x-2">
-              <span className="text-xl font-bold tracking-tight text-white font-sans">
-                Paper<span className="text-sky-400">Pulse</span>
+            <div className="flex items-center space-x-1.5">
+              <span className="font-serif tracking-widest text-sm font-bold text-schola-text uppercase">
+                THE SCHOLA
               </span>
-              <span className="hidden sm:inline-block text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-800/60 font-mono">
-                v2.0 Web & Mobile
+              <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-schola-subtle text-schola-muted border border-schola-border hidden lg:inline">
+                PaperPulse
               </span>
             </div>
-            <p className="hidden md:block text-[11px] text-slate-400 font-mono">
-              Autonomous Research Engine & Reader
-            </p>
           </div>
         </div>
 
-        {/* Center Navigation Tabs */}
-        <nav className="flex items-center space-x-1 sm:space-x-2 bg-slate-900/90 p-1 rounded-xl border border-slate-800 text-sm">
-          <button
-            onClick={() => setActiveTab('harvest')}
-            className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-all ${
-              activeTab === 'harvest' 
-                ? 'bg-sky-500 text-white shadow-md font-medium' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            <span className="hidden sm:inline">Harvest</span>
-          </button>
+      </div>
 
-          <button
-            onClick={() => setActiveTab('shelf')}
-            className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-all ${
-              activeTab === 'shelf' 
-                ? 'bg-sky-500 text-white shadow-md font-medium' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            }`}
-          >
-            <Bookmark className="w-4 h-4" />
-            <span className="hidden sm:inline">My Shelf</span>
-            {savedCount > 0 && (
-              <span className="px-1.5 py-0.2 text-[11px] rounded-full bg-sky-900/80 text-sky-200 font-mono">
-                {savedCount}
-              </span>
-            )}
-          </button>
-        </nav>
-
-        {/* Right Section: Folder Target, Online Pill & Auth */}
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          
-          {/* Target Folder Selector (Desktop only) */}
-          {window.showDirectoryPicker && (
+      {/* Center Nav: Home, Feed, Library, Notes, Lab, Settings */}
+      <nav className="hidden md:flex items-center space-x-1 text-xs">
+        {[
+          { name: 'Home', icon: Home },
+          { name: 'Feed', icon: Rss },
+          { name: 'Library', icon: BookOpen, count: savedCount },
+          { name: 'Notes', icon: FileText },
+          { name: 'Lab', icon: FlaskConical },
+          { name: 'Settings', icon: Settings },
+        ].map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.name;
+          return (
             <button
-              onClick={onSelectTargetDir}
-              title={targetDirHandle ? `Connected folder: ${targetDirHandle.name}` : "Pick laptop folder to save papers into"}
-              className={`hidden lg:flex items-center space-x-1.5 px-3 py-1.5 text-xs rounded-lg border transition-all ${
-                targetDirHandle 
-                  ? 'border-emerald-600/40 bg-emerald-950/30 text-emerald-300' 
-                  : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
+              key={item.name}
+              onClick={() => setActiveTab(item.name)}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer font-sans ${
+                isActive 
+                  ? 'bg-schola-subtle text-schola-text font-semibold shadow-2xs border border-schola-border' 
+                  : 'text-schola-muted hover:text-schola-text hover:bg-schola-subtle/50'
               }`}
             >
-              {targetDirHandle ? (
-                <>
-                  <FolderCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="truncate max-w-[110px]">{targetDirHandle.name}</span>
-                </>
-              ) : (
-                <>
-                  <FolderPlus className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Set Save Folder</span>
-                </>
-              )}
-            </button>
-          )}
-
-          {/* Network Mode Pill */}
-          <div 
-            title={isOnline ? "Online: Gemini 2.5 Flash active" : "Offline: Local Edge NLP engine active"}
-            className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs border font-mono ${
-              isOnline 
-                ? 'bg-emerald-950/40 border-emerald-800/50 text-emerald-400' 
-                : 'bg-amber-950/40 border-amber-800/50 text-amber-400'
-            }`}
-          >
-            {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-            <span className="text-[11px]">{isOnline ? 'Online AI' : 'Offline NLP'}</span>
-          </div>
-
-          {/* User Sign In / Profile */}
-          {user ? (
-            <div className="relative">
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center space-x-2 p-1 rounded-xl hover:bg-slate-900 border border-transparent hover:border-slate-800 transition"
-              >
-                {user.photoURL ? (
-                  <img 
-                    src={user.photoURL} 
-                    alt={user.displayName || "User"} 
-                    className="w-8 h-8 rounded-lg object-cover ring-1 ring-sky-500/50" 
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-lg bg-sky-600 flex items-center justify-center font-bold text-white text-xs">
-                    {(user.displayName || user.email || "U")[0].toUpperCase()}
-                  </div>
-                )}
-                <span className="hidden xl:inline text-xs font-medium text-slate-200 truncate max-w-[120px]">
-                  {user.displayName || user.email?.split("@")[0]}
+              <Icon className="w-3.5 h-3.5" />
+              <span>{item.name}</span>
+              {item.count !== undefined && item.count > 0 && (
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-schola-border text-schola-text">
+                  {item.count}
                 </span>
-              </button>
-
-              {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-64 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl py-2 text-sm z-50 animate-in fade-in slide-in-from-top-2">
-                  <div className="px-4 py-2 border-b border-slate-800">
-                    <p className="font-semibold text-slate-200">{user.displayName || "Researcher"}</p>
-                    <p className="text-xs text-slate-400 font-mono truncate">{user.email}</p>
-                  </div>
-
-                  <div className="px-4 py-2 text-xs text-slate-400">
-                    <p className="flex items-center space-x-1.5">
-                      <Smartphone className="w-3.5 h-3.5 text-sky-400" />
-                      <span>Android APK & PWA Ready</span>
-                    </p>
-                  </div>
-
-                  <div className="border-t border-slate-800 mt-1 pt-1">
-                    <button
-                      onClick={() => {
-                        logOut();
-                        setShowUserMenu(false);
-                      }}
-                      className="w-full flex items-center space-x-2 px-4 py-2 text-rose-400 hover:bg-rose-950/30 text-xs text-left"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
-                </div>
               )}
-            </div>
-          ) : (
-            <button
-              onClick={signInWithGoogle}
-              className="flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white text-xs font-medium shadow-md shadow-sky-500/20 transition-all cursor-pointer"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Sign In with Gmail</span>
             </button>
-          )}
+          );
+        })}
+      </nav>
 
-        </div>
+      {/* Right: Pings, ARC Pill, User Avatar */}
+      <div className="flex items-center space-x-2 sm:space-x-3">
+        
+        {/* Network status icon */}
+        <span 
+          title={isOnline ? "Online: Gemini API ready" : "Offline: Edge NLP active"}
+          className="p-1 text-schola-muted hidden sm:inline"
+        >
+          {isOnline ? <Wifi className="w-3.5 h-3.5 text-emerald-700" /> : <WifiOff className="w-3.5 h-3.5 text-amber-700" />}
+        </span>
+
+        {/* Pings notification */}
+        <button className="flex items-center space-x-1 px-2 py-1 text-xs text-schola-muted hover:text-schola-text rounded-md hover:bg-schola-subtle transition">
+          <Bell className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Pings</span>
+        </button>
+
+        {/* ARC Pill Button (Matching Image 2) */}
+        <button
+          onClick={onOpenArcAI}
+          className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-schola-arc hover:bg-schola-arcHover text-white text-xs font-semibold shadow-2xs transition cursor-pointer"
+          title="ARC Intelligent Research Assistant"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
+          <span>ARC</span>
+        </button>
+
+        {/* User Avatar Circle */}
+        {user ? (
+          <div className="relative">
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="w-7 h-7 rounded-full bg-schola-subtle border border-schola-border flex items-center justify-center font-bold text-schola-text text-xs hover:border-schola-arc transition overflow-hidden"
+            >
+              {user.photoURL ? (
+                <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
+              ) : (
+                <span>{(user.displayName || user.email || 'P')[0].toUpperCase()}</span>
+              )}
+            </button>
+
+            {showUserMenu && (
+              <div className="absolute right-0 mt-2 w-60 rounded-xl bg-white border border-schola-border shadow-xl py-2 text-xs z-50">
+                <div className="px-3 py-2 border-b border-schola-border">
+                  <p className="font-semibold text-schola-text">{user.displayName || "Researcher"}</p>
+                  <p className="text-[11px] text-schola-muted font-mono truncate">{user.email}</p>
+                </div>
+                <div className="px-3 py-2 text-[11px] text-schola-muted space-y-1">
+                  <p className="flex items-center space-x-1.5">
+                    <Smartphone className="w-3.5 h-3.5 text-schola-arc" />
+                    <span>Android APK v2.0 Ready</span>
+                  </p>
+                </div>
+                <div className="border-t border-schola-border pt-1">
+                  <button
+                    onClick={() => {
+                      logOut();
+                      setShowUserMenu(false);
+                    }}
+                    className="w-full flex items-center space-x-2 px-3 py-1.5 text-rose-700 hover:bg-rose-50 text-left cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={signInWithGoogle}
+            className="flex items-center space-x-1 px-3 py-1.5 rounded-lg border border-schola-border bg-white hover:bg-schola-subtle text-xs font-medium text-schola-text transition cursor-pointer"
+          >
+            <LogIn className="w-3.5 h-3.5 text-schola-arc" />
+            <span className="hidden sm:inline">Sign In</span>
+          </button>
+        )}
+
       </div>
     </header>
   );

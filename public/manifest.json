@@ -1,16 +1,16 @@
 {
-  "short_name": "PaperPulse",
-  "name": "PaperPulse — Intelligent Research Hub & Reader",
+  "short_name": "THE SCHOLA",
+  "name": "THE SCHOLA — PaperPulse Research Hub",
   "icons": [
     {
-      "src": "/vite.svg",
-      "type": "image/svg+xml",
+      "src": "/logo.png",
+      "type": "image/png",
       "sizes": "192x192 512x512"
     }
   ],
   "start_url": "/",
-  "background_color": "#020617",
-  "theme_color": "#0284c7",
+  "background_color": "#fbf9f5",
+  "theme_color": "#3d5a49",
   "display": "standalone",
   "orientation": "portrait-primary",
   "scope": "/"

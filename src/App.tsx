@@ -3,6 +3,8 @@ import type { Paper, AISummary, UserProfile } from './types';
 import { subscribeToAuth } from './services/firebase';
 import { getPaperSummary } from './services/aiSummarizer';
 import { Navbar } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
+import { PaperDetailsPanel } from './components/PaperDetailsPanel';
 import { SearchHarvest } from './components/SearchHarvest';
 import { Bookshelf } from './components/Bookshelf';
 import { InAppReader } from './components/InAppReader';
@@ -11,23 +13,36 @@ import { OfflineApkBanner } from './components/OfflineApkBanner';
 
 export const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<'harvest' | 'shelf' | 'reader'>('harvest');
+  const [activeTab, setActiveTab] = useState<string>('Library');
+  const [activeFolder, setActiveFolder] = useState<string>('Unlinked Papers');
   const [targetDirHandle, setTargetDirHandle] = useState<any>(null);
   const [savedPapers, setSavedPapers] = useState<Paper[]>([]);
   
-  // Reader state
-  const [readingPaper, setReadingPaper] = useState<Paper | null>(null);
-  const [readingSummary, setReadingSummary] = useState<AISummary | null>(null);
+  // Selected paper in the 3-column view
+  const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
+  const [selectedSummary, setSelectedSummary] = useState<AISummary | null>(null);
 
-  // Summary Modal state
+  // In-App Reader view state
+  const [isReadingMode, setIsReadingMode] = useState<boolean>(false);
+
+  // Pre-Read / ARC Summary Modal state
   const [summaryPaper, setSummaryPaper] = useState<Paper | null>(null);
   const [modalSummary, setModalSummary] = useState<AISummary | null>(null);
+
+  // Harvested papers store
+  const [harvestedPapers, setHarvestedPapers] = useState<Paper[]>([]);
 
   // Load saved shelf from localStorage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("paperpulse_shelf");
-      if (stored) setSavedPapers(JSON.parse(stored));
+      const stored = localStorage.getItem("theschola_shelf") || localStorage.getItem("paperpulse_shelf");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setSavedPapers(parsed);
+        if (parsed.length > 0 && !selectedPaper) {
+          setSelectedPaper(parsed[0]);
+        }
+      }
     } catch {}
   }, []);
 
@@ -37,11 +52,18 @@ export const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  // Update selected summary when selected paper changes
+  useEffect(() => {
+    if (selectedPaper) {
+      getPaperSummary(selectedPaper).then(res => setSelectedSummary(res));
+    }
+  }, [selectedPaper]);
+
   // Save shelf updates to localStorage
   const updateSavedPapers = (papers: Paper[]) => {
     setSavedPapers(papers);
     try {
-      localStorage.setItem("paperpulse_shelf", JSON.stringify(papers));
+      localStorage.setItem("theschola_shelf", JSON.stringify(papers));
     } catch {}
   };
 
@@ -55,15 +77,13 @@ export const App: React.FC = () => {
     }
   };
 
-  // Open In-App Reader
-  const handleReadPaper = async (paper: Paper) => {
-    setReadingPaper(paper);
-    // Fetch summary asynchronously for the side drawer
-    const sum = await getPaperSummary(paper);
-    setReadingSummary(sum);
+  // Open Full In-App Reader
+  const handleReadPaper = (paper: Paper) => {
+    setSelectedPaper(paper);
+    setIsReadingMode(true);
   };
 
-  // Open Pre-Read AI Summary Modal
+  // Open ARC Summary Modal
   const handleOpenSummary = async (paper: Paper) => {
     setSummaryPaper(paper);
     setModalSummary(null);
@@ -76,7 +96,7 @@ export const App: React.FC = () => {
     if (window.showDirectoryPicker) {
       try {
         const handle = await window.showDirectoryPicker({
-          id: "paperpulse_research_dir",
+          id: "theschola_research_dir",
           mode: "readwrite"
         });
         setTargetDirHandle(handle);
@@ -91,59 +111,109 @@ export const App: React.FC = () => {
   const bookmarkedIds = new Set(savedPapers.map(p => p.id));
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-schola-bg text-schola-text flex flex-col font-sans relative overflow-x-hidden">
       
-      {/* Navigation Bar */}
+      {/* Global Ambient Watermark of THE SCHOLA */}
+      <div 
+        className="fixed inset-0 bg-no-repeat bg-center bg-contain opacity-[0.024] pointer-events-none z-0"
+        style={{ backgroundImage: `url('/logo.png')` }}
+      />
+
+      {/* Top Navbar Matching Image 2 */}
       <Navbar
         user={user}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={(tab) => {
+          setActiveTab(tab);
+          if (tab === 'Home' || tab === 'Feed') setIsReadingMode(false);
+        }}
         targetDirHandle={targetDirHandle}
         onSelectTargetDir={handleSelectTargetDir}
+        onOpenArcAI={() => {
+          if (selectedPaper) handleOpenSummary(selectedPaper);
+          else if (savedPapers[0]) handleOpenSummary(savedPapers[0]);
+        }}
         savedCount={savedPapers.length}
       />
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'harvest' && (
-          <SearchHarvest
-            onOpenSummary={handleOpenSummary}
-            onReadPaper={handleReadPaper}
-            onToggleBookmark={handleToggleBookmark}
-            bookmarkedIds={bookmarkedIds}
-            targetDirHandle={targetDirHandle}
-            onSelectTargetDir={handleSelectTargetDir}
-          />
-        )}
-
-        {activeTab === 'shelf' && (
-          <Bookshelf
-            savedPapers={savedPapers}
-            onOpenSummary={handleOpenSummary}
-            onReadPaper={handleReadPaper}
-            onRemoveBookmark={handleToggleBookmark}
-            onExplore={() => setActiveTab('harvest')}
-          />
-        )}
-
-        {/* Offline Mobile APK Showcase Section */}
-        <div className="mt-10 sm:mt-14">
-          <OfflineApkBanner />
-        </div>
-      </main>
-
-      {/* In-App PDF Reader Modal */}
-      {readingPaper && (
-        <InAppReader
-          paper={readingPaper}
-          summary={readingSummary}
-          onBack={() => setReadingPaper(null)}
-          onBookmark={handleToggleBookmark}
-          isBookmarked={bookmarkedIds.has(readingPaper.id)}
+      {/* Main 3-Column Academic Research Workspace Matching Image 2 */}
+      <div className="flex-1 flex overflow-hidden relative z-10">
+        
+        {/* Left Column: Folders & Collections Sidebar */}
+        <Sidebar
+          activeFolder={activeFolder}
+          onSelectFolder={(folder) => {
+            setActiveFolder(folder);
+            setIsReadingMode(false);
+          }}
+          targetDirHandle={targetDirHandle}
+          onSelectTargetDir={handleSelectTargetDir}
+          savedPapers={savedPapers}
+          harvestedPapers={harvestedPapers}
         />
-      )}
 
-      {/* Pre-Read AI Summary Modal */}
+        {/* Center Column: Document Workspace or Harvest Stream */}
+        <main className="flex-1 flex flex-col overflow-y-auto bg-schola-bg relative">
+          
+          {isReadingMode && selectedPaper ? (
+            <InAppReader
+              paper={selectedPaper}
+              summary={selectedSummary}
+              onBack={() => setIsReadingMode(false)}
+              onBookmark={() => handleToggleBookmark(selectedPaper)}
+              isBookmarked={bookmarkedIds.has(selectedPaper.id)}
+              onOpenSummaryModal={() => handleOpenSummary(selectedPaper)}
+            />
+          ) : (
+            <div className="max-w-4xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+              
+              {activeFolder === 'My Saved Shelf' ? (
+                <Bookshelf
+                  savedPapers={savedPapers}
+                  onOpenSummary={handleOpenSummary}
+                  onReadPaper={handleReadPaper}
+                  onRemoveBookmark={handleToggleBookmark}
+                  onSelectPaper={(p) => setSelectedPaper(p)}
+                  selectedPaperId={selectedPaper?.id}
+                  onExplore={() => setActiveFolder('Unlinked Papers')}
+                />
+              ) : (
+                <SearchHarvest
+                  onOpenSummary={handleOpenSummary}
+                  onReadPaper={handleReadPaper}
+                  onToggleBookmark={handleToggleBookmark}
+                  onSelectPaper={(p) => setSelectedPaper(p)}
+                  onHarvested={(p) => setHarvestedPapers(p)}
+                  selectedPaperId={selectedPaper?.id}
+                  bookmarkedIds={bookmarkedIds}
+                  targetDirHandle={targetDirHandle}
+                  onSelectTargetDir={handleSelectTargetDir}
+                />
+              )}
+
+              {/* Sweet Section: Offline Mobile APK Banner */}
+              <div className="pt-4">
+                <OfflineApkBanner />
+              </div>
+
+            </div>
+          )}
+
+        </main>
+
+        {/* Right Column: Paper Details & ARC Actions (Matching Image 2) */}
+        <PaperDetailsPanel
+          paper={selectedPaper}
+          summary={selectedSummary}
+          onOpenSummaryModal={() => selectedPaper && handleOpenSummary(selectedPaper)}
+          onReadPaper={() => selectedPaper && handleReadPaper(selectedPaper)}
+          onBookmark={() => selectedPaper && handleToggleBookmark(selectedPaper)}
+          isBookmarked={selectedPaper ? bookmarkedIds.has(selectedPaper.id) : false}
+        />
+
+      </div>
+
+      {/* Pre-Read / ARC Summary Modal */}
       {summaryPaper && (
         <AISummaryModal
           paper={summaryPaper}
@@ -153,13 +223,6 @@ export const App: React.FC = () => {
           onUpdateSummary={(newSummary) => setModalSummary(newSummary)}
         />
       )}
-
-      {/* Subtle Aerospace Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950/80 py-6 text-center text-xs text-slate-500 font-mono">
-        <p>
-          PaperPulse · Smart Open-Access Aviation & AI Literature Hub · Penelope Inc. PHI Lab
-        </p>
-      </footer>
 
     </div>
   );

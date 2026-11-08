@@ -7,19 +7,26 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        display: ['Cinzel', 'serif'],
+        sans: ['Inter', '-apple-system', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
+      },
       colors: {
-        aerospace: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
-          950: '#082f49',
+        schola: {
+          bg: '#fbf9f5',
+          panel: '#f5f1ea',
+          subtle: '#eee8dc',
+          border: '#e3dcce',
+          borderDark: '#cfc4b2',
+          text: '#22201d',
+          muted: '#71695f',
+          lightMuted: '#9e9588',
+          arc: '#3d5a49',
+          arcHover: '#324b3c',
+          arcLight: '#eef3ef',
+          accent: '#8f6b48',
         },
       },
     },
