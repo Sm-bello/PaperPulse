@@ -1,0 +1,17 @@
+{
+  "short_name": "PaperPulse",
+  "name": "PaperPulse — Intelligent Research Hub & Reader",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#020617",
+  "theme_color": "#0284c7",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "/"
+}
