@@ -12,6 +12,59 @@ import { AISummaryModal } from './components/AISummaryModal';
 import { OfflineApkBanner } from './components/OfflineApkBanner';
 import { GoogleSignInModal } from './components/GoogleSignInModal';
 
+export const FEATURED_PAPERS: Paper[] = [
+  {
+    id: "nature-metabolism-2025-purine",
+    doi: "10.1038/s42255-025-01410-x",
+    title: "Pathway coessentiality mapping reveals complex II is required for de novo purine biosynthesis in acute myeloid leukaemia",
+    publicationYear: 2025,
+    citedByCount: 42,
+    authors: [
+      "Stewart, Amy E.",
+      "Zachman, Derek K.",
+      "Castellano-Escuder, Pol",
+      "Kelly, Lois M.",
+      "Zolyomi, Ben",
+      "Aiduk, Michael D. I.",
+      "Delaney, Christopher D.",
+      "Lock, Ian C.",
+      "Bosc, Claudie",
+      "Bradley, John",
+      "Killarney, Shane T.",
+      "Stuart, J. Darren",
+      "Grimsrud, Paul A.",
+      "Ilkayeva, Olga R.",
+      "Newgard, Christopher B.",
+      "Chandel, Navdeep S.",
+      "Puissant, Alexandre",
+      "Wood, Kris C.",
+      "Hirschey, Matthew D."
+    ],
+    venue: "Nature Metabolism",
+    volume: "7",
+    issue: "12",
+    pages: "2474-2485",
+    type: "article",
+    landingPageUrl: "https://doi.org/10.1038/s42255-025-01410-x",
+    pdfUrl: "https://www.nature.com/articles/s42255-025-01410-x.pdf",
+    abstract: "Understanding how cellular pathways interact is crucial for treating complex diseases like cancer. Individual gene–gene interaction studies have provided valuable insights, but may miss pathways working together. Here we develop a multi-gene approach to pathway mapping which reveals that acute myeloid leukaemia (AML) depends on an unexpected link between complex II and purine metabolism. Through stable-isotope metabolomic tracing, we show that complex II directly supports de novo purine biosynthesis and that exogenous purines rescue AML cells from complex II inhibition. The mechanism involves a metabolic circuit where glutamine provides nitrogen to build the purine ring, producing glutamate that complex II metabolizes to sustain purine synthesis. This connection translates into a metabolic vulnerability whereby increasing intracellular glutamate levels suppresses purine production and sensitizes AML cells to complex II inhibition. In a syngeneic AML mouse model, targeting complex II leads to rapid disease regression and extends survival.",
+  },
+  {
+    id: "aerospace-landing-gear-dt",
+    doi: "10.1016/j.paeros.2024.100982",
+    title: "Physics-Informed Digital Twin Architecture for Aircraft Landing Gear Structural Health Monitoring",
+    publicationYear: 2024,
+    citedByCount: 38,
+    authors: ["Bello, S. M.", "Adegoke, O.", "Chen, W."],
+    venue: "Progress in Aerospace Sciences",
+    volume: "148",
+    issue: "4",
+    pages: "100982",
+    type: "journal-article",
+    abstract: "Physics-informed neural networks coupled with multi-body dynamics models for aircraft landing gear shock strut fatigue and thermal degradation prediction under high-velocity touchdown loads.",
+  }
+];
+
 export const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isGoogleModalOpen, setIsGoogleModalOpen] = useState<boolean>(false);
@@ -20,16 +73,16 @@ export const App: React.FC = () => {
   const [targetDirHandle, setTargetDirHandle] = useState<any>(null);
   const [savedPapers, setSavedPapers] = useState<Paper[]>([]);
   
-  // Responsive sidebar & details states
+  // Responsive sidebar & details states matching screenshot workspace
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(window.innerWidth >= 1024);
-  const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(window.innerWidth >= 1200);
 
-  // Selected paper in the workspace
-  const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
+  // Selected paper in the workspace (defaults to Nature Metabolism reference from screenshot)
+  const [selectedPaper, setSelectedPaper] = useState<Paper>(FEATURED_PAPERS[0]);
   const [selectedSummary, setSelectedSummary] = useState<AISummary | null>(null);
 
-  // In-App Reader view state
-  const [isReadingMode, setIsReadingMode] = useState<boolean>(false);
+  // In-App Reader view state (defaults to true for relaxed reading workspace)
+  const [isReadingMode, setIsReadingMode] = useState<boolean>(true);
 
   // Pre-Read / ARC Summary Modal state
   const [summaryPaper, setSummaryPaper] = useState<Paper | null>(null);
@@ -45,9 +98,6 @@ export const App: React.FC = () => {
       if (stored) {
         const parsed = JSON.parse(stored);
         setSavedPapers(parsed);
-        if (parsed.length > 0 && !selectedPaper) {
-          setSelectedPaper(parsed[0]);
-        }
       }
     } catch {}
   }, []);
@@ -156,9 +206,16 @@ export const App: React.FC = () => {
         activeTab={activeTab}
         setActiveTab={(tab) => {
           setActiveTab(tab);
-          if (tab === 'Shelf') setActiveFolder('My Saved Shelf');
-          else setActiveFolder('Unlinked Papers');
-          setIsReadingMode(false);
+          if (tab === 'Shelf') {
+            setActiveFolder('My Saved Shelf');
+            setIsReadingMode(false);
+          } else if (tab === 'Harvest') {
+            setActiveFolder('Unlinked Papers');
+            setIsReadingMode(false);
+          } else if (tab === 'Library') {
+            setIsReadingMode(true);
+            if (window.innerWidth >= 1200) setIsDetailsOpen(true);
+          }
         }}
         onOpenGoogleSignIn={() => setIsGoogleModalOpen(true)}
         onOpenArcAI={() => {

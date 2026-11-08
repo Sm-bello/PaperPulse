@@ -7,6 +7,9 @@ export interface Paper {
   authors: string[];
   venue: string;
   type: string;
+  volume?: string;
+  issue?: string;
+  pages?: string;
   pdfUrl?: string;
   landingPageUrl?: string;
   abstract?: string;

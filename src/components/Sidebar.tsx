@@ -32,15 +32,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const folders = [
     { name: "Unlinked Papers", count: harvestedPapers.length || 15 },
+    { name: "Drug Target Validation SIRT...", count: 0 },
+    { name: "Thermal Proteome Profiling", count: 0 },
+    { name: "RNA-Seq Differential Expr...", count: 0 },
+    { name: "Prediction Model for SIRT4", count: 0 },
+    { name: "CAD-carnitine", count: 0 },
+    { name: "Cancer Genomics", count: 0 },
+    { name: "Mitochondrial Gene Expre...", count: 0 },
+    { name: "Metagenomics", count: 0 },
+    { name: "Grants", count: 0 },
+    { name: "Evo Bio Econ", count: 0 },
     { name: "Landing Gear Digital Twin", count: 12 },
     { name: "Neuromorphic SNN PHM", count: 8 },
     { name: "Rotating Detonation Engine", count: 14 },
     { name: "Avionics Blockchain ADS-B", count: 9 },
     { name: "Decentralized UAV Swarms", count: 7 },
     { name: "My Saved Shelf", count: savedPapers.length },
-    { name: "Thermal Proteome Profiling", count: 0 },
-    { name: "RNA-Seq Differential Expr...", count: 0 },
-    { name: "Cancer Genomics", count: 0 },
   ];
 
   if (!isOpen) return null;

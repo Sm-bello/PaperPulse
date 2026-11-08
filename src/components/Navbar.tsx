@@ -8,6 +8,7 @@ import {
   WifiOff,
   Smartphone,
   Layers,
+  BookOpen,
   Menu,
   X
 } from 'lucide-react';
@@ -86,21 +87,34 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       </div>
 
-      {/* Center Nav: ONLY Purposeful & Active Functional Tabs */}
+      {/* Center Nav: Academic Navigation Matching Screenshot */}
       <nav className="flex items-center space-x-1 sm:space-x-2 text-xs">
         
-        {/* Literature Discovery / Harvest */}
+        {/* Workspace / Library Reader */}
         <button
           onClick={() => setActiveTab('Library')}
           className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer font-sans ${
             activeTab === 'Library' 
-              ? 'bg-schola-subtle text-schola-text font-semibold shadow-2xs border border-schola-border' 
+              ? 'bg-[#ede5d8] text-schola-text font-bold shadow-2xs border border-[#ddcca8]' 
+              : 'text-schola-muted hover:text-schola-text hover:bg-schola-subtle/50'
+          }`}
+        >
+          <BookOpen className="w-3.5 h-3.5 text-schola-arc" />
+          <span>Library</span>
+        </button>
+
+        {/* Literature Discovery / Harvest */}
+        <button
+          onClick={() => setActiveTab('Harvest')}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer font-sans ${
+            activeTab === 'Harvest' 
+              ? 'bg-[#ede5d8] text-schola-text font-bold shadow-2xs border border-[#ddcca8]' 
               : 'text-schola-muted hover:text-schola-text hover:bg-schola-subtle/50'
           }`}
         >
           <Layers className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Discovery & Harvest</span>
-          <span className="sm:hidden">Harvest</span>
+          <span className="hidden sm:inline">Harvest</span>
+          <span className="sm:hidden">Search</span>
         </button>
 
         {/* Saved Shelf */}
@@ -108,7 +122,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => setActiveTab('Shelf')}
           className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer font-sans ${
             activeTab === 'Shelf' 
-              ? 'bg-schola-subtle text-schola-text font-semibold shadow-2xs border border-schola-border' 
+              ? 'bg-[#ede5d8] text-schola-text font-bold shadow-2xs border border-[#ddcca8]' 
               : 'text-schola-muted hover:text-schola-text hover:bg-schola-subtle/50'
           }`}
         >

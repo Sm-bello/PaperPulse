@@ -85,31 +85,31 @@ export const PaperDetailsPanel: React.FC<PaperDetailsPanelProps> = ({
         {/* ARC Actions Section */}
         <div className="space-y-2">
           <span className="text-[11px] font-mono uppercase text-schola-muted tracking-wider">
-            ARC AI Actions
+            ARC Actions
           </span>
           <div className="space-y-1.5">
             <button
               onClick={onOpenSummaryModal}
-              className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg bg-schola-subtle hover:bg-schola-border text-schola-text font-medium text-xs border border-schola-border transition text-left cursor-pointer shadow-2xs"
+              className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg bg-[#fbf5ea] hover:bg-[#f5ecdc] text-schola-text font-serif text-xs border border-[#ecd9be] transition text-left cursor-pointer shadow-2xs"
             >
-              <Sparkles className="w-3.5 h-3.5 text-schola-arc" />
-              <span>View Executive Summary & TL;DR</span>
+              <FileText className="w-3.5 h-3.5 text-schola-arc" />
+              <span>View Methods</span>
             </button>
 
             <button
               onClick={onOpenSummaryModal}
-              className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg bg-schola-subtle hover:bg-schola-border text-schola-text font-medium text-xs border border-schola-border transition text-left cursor-pointer shadow-2xs"
+              className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg bg-[#fbf5ea] hover:bg-[#f5ecdc] text-schola-text font-serif text-xs border border-[#ecd9be] transition text-left cursor-pointer shadow-2xs"
             >
-              <FileText className="w-3.5 h-3.5 text-schola-muted" />
-              <span>View Methods & Equations</span>
+              <Sparkles className="w-3.5 h-3.5 text-schola-arc" />
+              <span>View Summary</span>
             </button>
 
             <button
               onClick={onReadPaper}
-              className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg bg-schola-subtle hover:bg-schola-border text-schola-text font-medium text-xs border border-schola-border transition text-left cursor-pointer shadow-2xs"
+              className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg bg-[#fbf5ea] hover:bg-[#f5ecdc] text-schola-text font-serif text-xs border border-[#ecd9be] transition text-left cursor-pointer shadow-2xs"
             >
-              <BookOpen className="w-3.5 h-3.5 text-schola-muted" />
-              <span>Read Full Document in Reader</span>
+              <BookOpen className="w-3.5 h-3.5 text-schola-arc" />
+              <span>View References</span>
             </button>
           </div>
         </div>
@@ -120,7 +120,7 @@ export const PaperDetailsPanel: React.FC<PaperDetailsPanelProps> = ({
           {/* Title */}
           <div>
             <label className="block text-[11px] text-schola-muted mb-1 font-mono">Title</label>
-            <div className="p-2.5 rounded-lg bg-white border border-schola-border text-schola-text text-xs leading-snug line-clamp-3 font-serif font-semibold">
+            <div className="p-2.5 rounded-lg bg-white border border-schola-border text-schola-text text-xs leading-snug font-serif font-semibold">
               {paper.title}
             </div>
           </div>
@@ -174,9 +174,31 @@ export const PaperDetailsPanel: React.FC<PaperDetailsPanelProps> = ({
 
           {/* Journal / Venue */}
           <div>
-            <label className="block text-[11px] text-schola-muted mb-1 font-mono">Journal / Venue</label>
+            <label className="block text-[11px] text-schola-muted mb-1 font-mono">Journal</label>
             <div className="p-2 rounded-lg bg-white border border-schola-border text-schola-text text-xs truncate font-serif">
-              {paper.venue || "Academic Open Index"}
+              {paper.venue || "Nature Metabolism"}
+            </div>
+          </div>
+
+          {/* Volume, Issue, Pages (Exact 3-box row matching reference screenshot) */}
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="block text-[11px] text-schola-muted mb-1 font-mono">Volume</label>
+              <div className="p-2 rounded-lg bg-white border border-schola-border text-schola-text text-xs font-mono text-center">
+                {paper.volume || "7"}
+              </div>
+            </div>
+            <div>
+              <label className="block text-[11px] text-schola-muted mb-1 font-mono">Issue</label>
+              <div className="p-2 rounded-lg bg-white border border-schola-border text-schola-text text-xs font-mono text-center">
+                {paper.issue || "12"}
+              </div>
+            </div>
+            <div>
+              <label className="block text-[11px] text-schola-muted mb-1 font-mono">Pages</label>
+              <div className="p-2 rounded-lg bg-white border border-schola-border text-schola-text text-xs font-mono text-center truncate">
+                {paper.pages || "2474-2485"}
+              </div>
             </div>
           </div>
 
@@ -185,7 +207,7 @@ export const PaperDetailsPanel: React.FC<PaperDetailsPanelProps> = ({
             <label className="block text-[11px] text-schola-muted mb-1 font-mono">Tags</label>
             <input
               type="text"
-              defaultValue="open-access, research, literature"
+              defaultValue="tag1, tag2, ..."
               className="w-full p-2 rounded-lg bg-white border border-schola-border text-schola-text text-xs font-mono focus:outline-none"
             />
           </div>
