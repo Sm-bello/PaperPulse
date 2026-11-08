@@ -1,29 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, 
-  Home, 
-  Rss, 
-  BookOpen, 
-  FileText, 
-  FlaskConical, 
-  Settings, 
-  Bell, 
+  Bookmark, 
   LogIn, 
   LogOut, 
   Wifi, 
   WifiOff,
-  Smartphone
+  Smartphone,
+  Layers,
+  Menu,
+  X
 } from 'lucide-react';
 import type { UserProfile } from '../types';
-import { signInWithGoogle, logOut } from '../services/firebase';
+import { logOut } from '../services/firebase';
 
 interface NavbarProps {
   user: UserProfile | null;
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  targetDirHandle: any;
-  onSelectTargetDir: () => void;
+  onOpenGoogleSignIn: () => void;
   onOpenArcAI: () => void;
+  onToggleSidebar?: () => void;
+  isSidebarOpen?: boolean;
   savedCount: number;
 }
 
@@ -31,7 +29,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   user,
   activeTab,
   setActiveTab,
+  onOpenGoogleSignIn,
   onOpenArcAI,
+  onToggleSidebar,
+  isSidebarOpen,
   savedCount,
 }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -49,107 +50,107 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   return (
-    <header className="h-14 border-b border-schola-border bg-schola-panel px-3 sm:px-5 flex items-center justify-between select-none">
+    <header className="h-14 border-b border-schola-border bg-schola-panel px-3 sm:px-6 flex items-center justify-between select-none sticky top-0 z-40 backdrop-blur-md">
       
-      {/* Left: Window Dots & Logo */}
-      <div className="flex items-center space-x-3.5">
+      {/* Left: Sidebar Toggle & Brand Logo (No generic colored dots!) */}
+      <div className="flex items-center space-x-2.5 sm:space-x-4">
         
-        {/* macOS Window Controls */}
-        <div className="flex items-center space-x-1.5">
-          <span className="w-3 h-3 rounded-full bg-[#ff5f56] inline-block shadow-2xs cursor-pointer" />
-          <span className="w-3 h-3 rounded-full bg-[#ffbd2e] inline-block shadow-2xs cursor-pointer" />
-          <span className="w-3 h-3 rounded-full bg-[#27c93f] inline-block shadow-2xs cursor-pointer" />
-        </div>
+        {/* Mobile/Desktop Sidebar Toggle Button */}
+        {onToggleSidebar && (
+          <button
+            onClick={onToggleSidebar}
+            className="p-1.5 rounded-lg text-schola-muted hover:text-schola-text hover:bg-schola-subtle transition cursor-pointer"
+            title="Toggle Collections Sidebar"
+          >
+            {isSidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
+        )}
 
         {/* Brand Logo (THE SCHOLA) */}
         <div 
           onClick={() => setActiveTab('Library')}
-          className="flex items-center space-x-2.5 cursor-pointer pl-1 group"
+          className="flex items-center space-x-2.5 cursor-pointer group"
         >
           <div className="w-7 h-7 rounded-md bg-white border border-schola-border shadow-2xs flex items-center justify-center overflow-hidden p-0.5">
             <img src="/logo.png" alt="THE SCHOLA" className="w-full h-full object-contain" />
           </div>
-          <div>
-            <div className="flex items-center space-x-1.5">
-              <span className="font-serif tracking-widest text-sm font-bold text-schola-text uppercase">
-                THE SCHOLA
-              </span>
-              <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-schola-subtle text-schola-muted border border-schola-border hidden lg:inline">
-                PaperPulse
-              </span>
-            </div>
+          <div className="flex items-center space-x-1.5">
+            <span className="font-serif tracking-widest text-sm sm:text-base font-bold text-schola-text uppercase">
+              THE SCHOLA
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-schola-subtle text-schola-muted border border-schola-border hidden sm:inline">
+              ScholaPulse
+            </span>
           </div>
         </div>
 
       </div>
 
-      {/* Center Nav: Home, Feed, Library, Notes, Lab, Settings */}
-      <nav className="hidden md:flex items-center space-x-1 text-xs">
-        {[
-          { name: 'Home', icon: Home },
-          { name: 'Feed', icon: Rss },
-          { name: 'Library', icon: BookOpen, count: savedCount },
-          { name: 'Notes', icon: FileText },
-          { name: 'Lab', icon: FlaskConical },
-          { name: 'Settings', icon: Settings },
-        ].map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.name;
-          return (
-            <button
-              key={item.name}
-              onClick={() => setActiveTab(item.name)}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer font-sans ${
-                isActive 
-                  ? 'bg-schola-subtle text-schola-text font-semibold shadow-2xs border border-schola-border' 
-                  : 'text-schola-muted hover:text-schola-text hover:bg-schola-subtle/50'
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              <span>{item.name}</span>
-              {item.count !== undefined && item.count > 0 && (
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-schola-border text-schola-text">
-                  {item.count}
-                </span>
-              )}
-            </button>
-          );
-        })}
+      {/* Center Nav: ONLY Purposeful & Active Functional Tabs */}
+      <nav className="flex items-center space-x-1 sm:space-x-2 text-xs">
+        
+        {/* Literature Discovery / Harvest */}
+        <button
+          onClick={() => setActiveTab('Library')}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer font-sans ${
+            activeTab === 'Library' 
+              ? 'bg-schola-subtle text-schola-text font-semibold shadow-2xs border border-schola-border' 
+              : 'text-schola-muted hover:text-schola-text hover:bg-schola-subtle/50'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Discovery & Harvest</span>
+          <span className="sm:hidden">Harvest</span>
+        </button>
+
+        {/* Saved Shelf */}
+        <button
+          onClick={() => setActiveTab('Shelf')}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer font-sans ${
+            activeTab === 'Shelf' 
+              ? 'bg-schola-subtle text-schola-text font-semibold shadow-2xs border border-schola-border' 
+              : 'text-schola-muted hover:text-schola-text hover:bg-schola-subtle/50'
+          }`}
+        >
+          <Bookmark className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">My Shelf</span>
+          <span className="sm:hidden">Shelf</span>
+          {savedCount > 0 && (
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-schola-border text-schola-text">
+              {savedCount}
+            </span>
+          )}
+        </button>
+
       </nav>
 
-      {/* Right: Pings, ARC Pill, User Avatar */}
+      {/* Right: ARC AI Button & Google Sign-In */}
       <div className="flex items-center space-x-2 sm:space-x-3">
         
         {/* Network status icon */}
         <span 
-          title={isOnline ? "Online: Gemini API ready" : "Offline: Edge NLP active"}
+          title={isOnline ? "Online: Gemini 2.5 Flash active" : "Offline: Edge NLP active"}
           className="p-1 text-schola-muted hidden sm:inline"
         >
           {isOnline ? <Wifi className="w-3.5 h-3.5 text-emerald-700" /> : <WifiOff className="w-3.5 h-3.5 text-amber-700" />}
         </span>
 
-        {/* Pings notification */}
-        <button className="flex items-center space-x-1 px-2 py-1 text-xs text-schola-muted hover:text-schola-text rounded-md hover:bg-schola-subtle transition">
-          <Bell className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Pings</span>
-        </button>
-
-        {/* ARC Pill Button (Matching Image 2) */}
+        {/* ARC Assistant Pill Button */}
         <button
           onClick={onOpenArcAI}
-          className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-schola-arc hover:bg-schola-arcHover text-white text-xs font-semibold shadow-2xs transition cursor-pointer"
+          className="flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-full bg-schola-arc hover:bg-schola-arcHover text-white text-xs font-semibold shadow-2xs transition cursor-pointer"
           title="ARC Intelligent Research Assistant"
         >
           <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
-          <span>ARC</span>
+          <span>ARC AI</span>
         </button>
 
-        {/* User Avatar Circle */}
+        {/* User Avatar Circle / Google Sign-In */}
         {user ? (
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="w-7 h-7 rounded-full bg-schola-subtle border border-schola-border flex items-center justify-center font-bold text-schola-text text-xs hover:border-schola-arc transition overflow-hidden"
+              className="w-8 h-8 rounded-full bg-schola-subtle border border-schola-border flex items-center justify-center font-bold text-schola-text text-xs hover:border-schola-arc transition overflow-hidden cursor-pointer"
             >
               {user.photoURL ? (
                 <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
@@ -159,12 +160,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-60 rounded-xl bg-white border border-schola-border shadow-xl py-2 text-xs z-50">
-                <div className="px-3 py-2 border-b border-schola-border">
-                  <p className="font-semibold text-schola-text">{user.displayName || "Researcher"}</p>
+              <div className="absolute right-0 mt-2 w-64 rounded-xl bg-white border border-schola-border shadow-2xl py-2 text-xs z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="px-3.5 py-2.5 border-b border-schola-border bg-schola-panel/50">
+                  <p className="font-semibold text-schola-text truncate">{user.displayName || "Researcher"}</p>
                   <p className="text-[11px] text-schola-muted font-mono truncate">{user.email}</p>
                 </div>
-                <div className="px-3 py-2 text-[11px] text-schola-muted space-y-1">
+                <div className="px-3.5 py-2 text-[11px] text-schola-muted">
                   <p className="flex items-center space-x-1.5">
                     <Smartphone className="w-3.5 h-3.5 text-schola-arc" />
                     <span>Android APK v2.0 Ready</span>
@@ -175,8 +176,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onClick={() => {
                       logOut();
                       setShowUserMenu(false);
+                      window.location.reload();
                     }}
-                    className="w-full flex items-center space-x-2 px-3 py-1.5 text-rose-700 hover:bg-rose-50 text-left cursor-pointer"
+                    className="w-full flex items-center space-x-2 px-3.5 py-2 text-rose-700 hover:bg-rose-50 text-left cursor-pointer transition"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Sign Out</span>
@@ -187,11 +189,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         ) : (
           <button
-            onClick={signInWithGoogle}
-            className="flex items-center space-x-1 px-3 py-1.5 rounded-lg border border-schola-border bg-white hover:bg-schola-subtle text-xs font-medium text-schola-text transition cursor-pointer"
+            onClick={onOpenGoogleSignIn}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-schola-border bg-white hover:bg-schola-subtle text-xs font-medium text-schola-text transition cursor-pointer shadow-2xs"
           >
             <LogIn className="w-3.5 h-3.5 text-schola-arc" />
-            <span className="hidden sm:inline">Sign In</span>
+            <span className="hidden sm:inline">Sign In with Gmail</span>
+            <span className="sm:hidden">Sign In</span>
           </button>
         )}
 

@@ -3,7 +3,6 @@ import {
   getAuth, 
   GoogleAuthProvider, 
   signInWithPopup, 
-  signInWithRedirect,
   signOut as firebaseSignOut, 
   onAuthStateChanged,
   type User,
@@ -12,7 +11,6 @@ import {
 import type { UserProfile } from "../types";
 
 // Firebase Configuration from environment or defaults
-// The user can connect their project via .env or Vercel Environment Variables
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDemoDummyKeyForDevelopmentMode00",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "paperpulse-auth.firebaseapp.com",
@@ -42,19 +40,11 @@ try {
 export { auth, googleProvider };
 
 /**
- * Sign in with Google (supports popup with mobile fallback)
+ * Sign in with Google (triggers native Firebase popup if configured)
  */
-export async function signInWithGoogle(): Promise<UserProfile> {
+export async function signInWithFirebaseGoogle(): Promise<UserProfile | null> {
   if (!auth || !googleProvider) {
-    // Development fallback mock user if no Firebase credentials provided yet
-    const demoUser: UserProfile = {
-      uid: "demo-aerospace-user",
-      email: "bellosani2drescue@gmail.com",
-      displayName: "Mohammed Bello Sani",
-      photoURL: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-    };
-    localStorage.setItem("paperpulse_user", JSON.stringify(demoUser));
-    return demoUser;
+    return null;
   }
 
   try {
@@ -66,32 +56,19 @@ export async function signInWithGoogle(): Promise<UserProfile> {
       displayName: user.displayName || user.email?.split("@")[0] || "Researcher",
       photoURL: user.photoURL,
     };
-    localStorage.setItem("paperpulse_user", JSON.stringify(profile));
+    saveUserSession(profile);
     return profile;
   } catch (error: any) {
-    // If popup is blocked on mobile, try redirect or fallback
-    if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-      try {
-        await signInWithRedirect(auth, googleProvider);
-      } catch (redirectErr) {
-        console.error("Redirect auth error:", redirectErr);
-      }
-    }
-    
-    // Graceful offline/local fallback
-    console.warn("Using offline user session:", error.message);
-    const cached = localStorage.getItem("paperpulse_user");
-    if (cached) return JSON.parse(cached);
-
-    const fallbackUser: UserProfile = {
-      uid: "user-" + Date.now(),
-      email: "bellosani2drescue@gmail.com",
-      displayName: "Mohammed Bello Sani",
-      photoURL: null,
-    };
-    localStorage.setItem("paperpulse_user", JSON.stringify(fallbackUser));
-    return fallbackUser;
+    console.warn("Firebase popup closed or unauthorized domain:", error.message);
+    return null;
   }
+}
+
+export function saveUserSession(user: UserProfile): void {
+  try {
+    localStorage.setItem("theschola_user", JSON.stringify(user));
+    localStorage.setItem("paperpulse_user", JSON.stringify(user));
+  } catch {}
 }
 
 /**
@@ -105,6 +82,7 @@ export async function logOut(): Promise<void> {
       console.warn("Sign out err:", e);
     }
   }
+  localStorage.removeItem("theschola_user");
   localStorage.removeItem("paperpulse_user");
 }
 
@@ -113,7 +91,7 @@ export async function logOut(): Promise<void> {
  */
 export function subscribeToAuth(callback: (user: UserProfile | null) => void) {
   // Check localStorage first for immediate UI responsiveness
-  const saved = localStorage.getItem("paperpulse_user");
+  const saved = localStorage.getItem("theschola_user") || localStorage.getItem("paperpulse_user");
   if (saved) {
     try {
       callback(JSON.parse(saved));
@@ -132,7 +110,7 @@ export function subscribeToAuth(callback: (user: UserProfile | null) => void) {
         displayName: user.displayName || user.email?.split("@")[0] || "Researcher",
         photoURL: user.photoURL,
       };
-      localStorage.setItem("paperpulse_user", JSON.stringify(profile));
+      saveUserSession(profile);
       callback(profile);
     } else {
       if (!saved) {

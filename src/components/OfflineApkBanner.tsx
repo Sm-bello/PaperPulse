@@ -6,23 +6,27 @@ import {
   ShieldCheck, 
   CheckCircle2, 
   Layers,
-  BookOpen
+  BookOpen,
+  RefreshCw
 } from 'lucide-react';
+import { downloadLatestApkFromGitHub } from '../services/apkService';
 
 export const OfflineApkBanner: React.FC = () => {
-  const [downloadTriggered, setDownloadTriggered] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
 
-  const handleDownloadApk = () => {
-    setDownloadTriggered(true);
-    const a = document.createElement('a');
-    a.href = '/PaperPulse.apk';
-    a.setAttribute('download', 'PaperPulse-v2.0.apk');
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    setTimeout(() => setDownloadTriggered(false), 3000);
+  const handleDownloadApk = async () => {
+    setDownloading(true);
+    try {
+      await downloadLatestApkFromGitHub("Sm-bello", "PaperPulse");
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 3500);
+    } catch (e) {
+      console.error("APK download error:", e);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -37,7 +41,7 @@ export const OfflineApkBanner: React.FC = () => {
       <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-6 sm:gap-8">
         
         {/* Left Column: Details */}
-        <div className="space-y-3.5 max-w-2xl text-center lg:text-left">
+        <div className="space-y-3 max-w-2xl text-center lg:text-left">
           
           {/* Badge */}
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-schola-arcLight border border-schola-arc/20 text-schola-arc text-xs font-mono font-medium">
@@ -53,7 +57,7 @@ export const OfflineApkBanner: React.FC = () => {
           </h2>
 
           <p className="text-xs sm:text-sm text-schola-muted leading-relaxed font-sans">
-            Conducting experiments in shielded labs, flight cabins, or remote field sites with zero connectivity? Install PaperPulse directly on your Android phone. Read full PDFs, keep organized topic folders, and generate deep executive summaries with the embedded <strong>offline Edge NLP engine</strong>.
+            Conducting experiments in shielded labs, flight cabins, or remote field sites with zero connectivity? Install ScholaPulse directly on your Android phone. Read full PDFs, keep organized topic folders, and generate deep executive summaries with the embedded <strong>offline Edge NLP engine</strong>.
           </p>
 
           {/* Highlights Row */}
@@ -96,12 +100,18 @@ export const OfflineApkBanner: React.FC = () => {
           
           <button
             onClick={handleDownloadApk}
-            className="w-full flex items-center justify-center space-x-2 px-5 py-3.5 rounded-xl bg-schola-arc hover:bg-schola-arcHover text-white font-semibold text-xs sm:text-sm shadow-sm transition-all transform hover:-translate-y-0.5 cursor-pointer"
+            disabled={downloading}
+            className="w-full flex items-center justify-center space-x-2 px-5 py-3.5 rounded-xl bg-schola-arc hover:bg-schola-arcHover text-white font-semibold text-xs sm:text-sm shadow-sm transition-all transform hover:-translate-y-0.5 cursor-pointer disabled:opacity-75"
           >
-            {downloadTriggered ? (
+            {downloading ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin text-emerald-200" />
+                <span>Checking GitHub Release...</span>
+              </>
+            ) : downloadSuccess ? (
               <>
                 <CheckCircle2 className="w-4 h-4 text-emerald-200" />
-                <span>Downloading APK...</span>
+                <span>Shipping Latest APK...</span>
               </>
             ) : (
               <>
@@ -120,7 +130,7 @@ export const OfflineApkBanner: React.FC = () => {
 
           <div className="flex items-center space-x-1.5 text-[11px] text-schola-lightMuted font-mono">
             <ShieldCheck className="w-3.5 h-3.5 text-schola-arc" />
-            <span>Capacitor Native · Verified Safe APK</span>
+            <span>GitHub Latest Release · Verified APK</span>
           </div>
 
         </div>
@@ -133,21 +143,21 @@ export const OfflineApkBanner: React.FC = () => {
           <div className="p-3 rounded-xl bg-schola-panel border border-schola-border">
             <span className="font-mono text-schola-arc font-bold block mb-1">Step 1 · Download</span>
             <p className="text-schola-text">
-              Tap <strong>Download Android APK</strong>. The package <code className="text-schola-arc">PaperPulse-v2.0.apk</code> will save to your Downloads folder.
+              Tap <strong>Download Android APK</strong>. The file will save directly into your phone's Downloads directory.
             </p>
           </div>
 
           <div className="p-3 rounded-xl bg-schola-panel border border-schola-border">
             <span className="font-mono text-schola-arc font-bold block mb-1">Step 2 · Allow Install</span>
             <p className="text-schola-text">
-              Open the downloaded file. When prompted, select <em>"Allow from this source"</em> in your Android settings.
+              Tap the downloaded file. When prompted by Android, select <em>"Allow from this source"</em> to approve installation.
             </p>
           </div>
 
           <div className="p-3 rounded-xl bg-schola-panel border border-schola-border">
             <span className="font-mono text-schola-arc font-bold block mb-1">Step 3 · Offline Research</span>
             <p className="text-schola-text">
-              Launch PaperPulse. Read papers, save references, and run edge AI summaries with zero internet connection.
+              Open ScholaPulse. Read papers, download collections, and generate edge AI summaries with zero reception.
             </p>
           </div>
         </div>
