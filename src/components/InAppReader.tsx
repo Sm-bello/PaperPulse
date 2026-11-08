@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   ArrowLeft, 
   ExternalLink, 
@@ -9,18 +9,17 @@ import {
   Eye, 
   Bookmark, 
   Printer, 
-  RotateCw, 
   ZoomIn, 
   ZoomOut, 
-  Menu,
-  Maximize2
+  Upload,
+  FileText
 } from 'lucide-react';
-import type { Paper, AISummary } from '../types';
+import type { Paper } from '../types';
 import { downloadSinglePaper } from '../services/downloader';
+import { parseDocumentFile, type ParsedDocument } from '../services/documentParser';
 
 interface InAppReaderProps {
   paper: Paper;
-  summary?: AISummary | null;
   onBack: () => void;
   onBookmark: (paper: Paper) => void;
   isBookmarked: boolean;
@@ -35,15 +34,37 @@ export const InAppReader: React.FC<InAppReaderProps> = ({
   onOpenSummaryModal,
 }) => {
   const [readerTheme, setReaderTheme] = useState<'normal' | 'dark' | 'sepia'>('normal');
-  const [zoomLevel, setZoomLevel] = useState<number>(85);
+  const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [downloading, setDownloading] = useState(false);
+  const [activeDoc, setActiveDoc] = useState<ParsedDocument | null>(null);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const pdfUrl = paper.pdfUrl || paper.landingPageUrl || "";
+  const pdfUrl = activeDoc?.url || paper.pdfUrl || paper.landingPageUrl || "";
 
   const handleDownload = async () => {
     setDownloading(true);
     await downloadSinglePaper(paper);
     setDownloading(false);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const parsed = await parseDocumentFile(file);
+      setActiveDoc(parsed);
+    }
+  };
+
+  const getContainerThemeStyle = () => {
+    switch (readerTheme) {
+      case 'dark':
+        return 'bg-slate-900 text-slate-100';
+      case 'sepia':
+        return 'bg-[#fbf3e4] text-[#433422]';
+      default:
+        return 'bg-[#fcfaf6] text-[#22201d]';
+    }
   };
 
   const getViewerStyle = () => {
@@ -57,161 +78,145 @@ export const InAppReader: React.FC<InAppReaderProps> = ({
     }
   };
 
+  const docTitle = activeDoc?.title || paper.title;
+
   return (
-    <div className="flex-1 flex flex-col h-full bg-schola-bg relative select-none">
+    <div className={`flex-1 flex flex-col h-full w-full select-none transition-colors duration-200 ${getContainerThemeStyle()}`}>
       
-      {/* Background Watermark (THE SCHOLA) */}
-      <div 
-        className="absolute inset-0 bg-no-repeat bg-center bg-contain opacity-[0.032] pointer-events-none"
-        style={{ backgroundImage: `url('/logo.png')` }}
+      {/* Hidden File Input for Opening Any Document */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept=".pdf,.md,.markdown,.docx,.txt,.csv,.json,.py,.tex,.bib"
+        className="hidden"
       />
 
-      {/* Document Tab Header (Matching Image 2) */}
-      <div className="h-9 px-4 border-b border-schola-border bg-schola-panel/60 flex items-center justify-between text-xs text-schola-muted">
-        <div className="flex items-center space-x-2 truncate">
+      {/* Top Reading Navigation Bar */}
+      <div className="h-11 px-3 sm:px-6 border-b border-schola-border flex items-center justify-between text-xs backdrop-blur-md">
+        
+        {/* Back and Title */}
+        <div className="flex items-center space-x-2.5 truncate max-w-md sm:max-w-xl">
           <button 
             onClick={onBack}
-            className="p-1 rounded hover:text-schola-text hover:bg-schola-subtle transition"
-            title="Back to Harvest"
+            className="p-1.5 rounded-lg hover:bg-schola-subtle text-schola-muted hover:text-schola-text transition cursor-pointer"
+            title="Back to Library"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-4 h-4" />
           </button>
-          <span className="font-serif font-medium text-schola-text truncate max-w-md lg:max-w-xl">
-            {paper.title}
+          <span className="font-serif font-bold text-sm truncate">
+            {docTitle}
           </span>
+          {activeDoc && (
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-schola-arcLight text-schola-arc uppercase">
+              {activeDoc.type}
+            </span>
+          )}
         </div>
 
-        <div className="flex items-center space-x-2 shrink-0">
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-schola-subtle text-schola-muted">
-            {paper.venue}
-          </span>
-        </div>
-      </div>
-
-      {/* PDF Sub-Toolbar (Matching Image 2: [三 Name 1/27 - 85% + [] ↺ ⬇ 🖨 ⋮]) */}
-      <div className="h-10 px-4 bg-[#23272d] text-slate-300 flex items-center justify-between text-xs select-none shadow-xs">
-        
-        {/* Left Toolbar Items */}
-        <div className="flex items-center space-x-3 truncate">
-          <button className="text-slate-400 hover:text-white transition">
-            <Menu className="w-4 h-4" />
-          </button>
-          <span className="font-sans text-xs text-slate-200 truncate max-w-[180px] sm:max-w-xs">
-            {paper.title.slice(0, 35)}...
-          </span>
-          <span className="text-slate-400 font-mono text-[11px] hidden sm:inline">
-            1 / 27
-          </span>
-        </div>
-
-        {/* Center Zoom Controls */}
-        <div className="flex items-center space-x-2 text-xs font-mono">
-          <button 
-            onClick={() => setZoomLevel(Math.max(50, zoomLevel - 15))}
-            className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
-            title="Zoom out"
-          >
-            <ZoomOut className="w-3.5 h-3.5" />
-          </button>
-          <span className="w-10 text-center text-slate-300 text-[11px]">{zoomLevel}%</span>
-          <button 
-            onClick={() => setZoomLevel(Math.min(150, zoomLevel + 15))}
-            className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
-            title="Zoom in"
-          >
-            <ZoomIn className="w-3.5 h-3.5" />
-          </button>
-          <button 
-            onClick={() => setZoomLevel(100)}
-            className="p-1 text-slate-400 hover:text-white transition hidden sm:inline cursor-pointer"
-            title="Fit to window"
-          >
-            <Maximize2 className="w-3.5 h-3.5" />
-          </button>
-          <button 
-            className="p-1 text-slate-400 hover:text-white transition hidden sm:inline"
-            title="Rotate"
-          >
-            <RotateCw className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Right Action Tools */}
-        <div className="flex items-center space-x-2">
+        {/* Reading Controls */}
+        <div className="flex items-center space-x-1 sm:space-x-2">
           
-          {/* Eye-Care & Dark Theme Selector */}
-          <div className="flex items-center bg-slate-800 rounded-md p-0.5 text-xs mr-1">
+          {/* Open Local Document Button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center space-x-1 px-2.5 py-1 rounded-md border border-schola-border hover:bg-schola-subtle transition cursor-pointer text-xs"
+            title="Open local PDF, DOCX, Markdown, or text file"
+          >
+            <Upload className="w-3.5 h-3.5 text-schola-arc" />
+            <span className="hidden sm:inline">Open File</span>
+          </button>
+
+          {/* Theme Selector */}
+          <div className="flex items-center rounded-lg border border-schola-border p-0.5 text-xs">
             <button
               onClick={() => setReaderTheme('normal')}
-              className={`p-1 rounded ${readerTheme === 'normal' ? 'bg-slate-700 text-white' : 'text-slate-400'}`}
-              title="Standard Light"
+              className={`p-1 rounded ${readerTheme === 'normal' ? 'bg-white shadow-2xs font-bold' : 'text-schola-muted'}`}
+              title="Light Mode"
             >
               <Sun className="w-3 h-3" />
             </button>
             <button
               onClick={() => setReaderTheme('sepia')}
-              className={`p-1 rounded ${readerTheme === 'sepia' ? 'bg-amber-800 text-amber-100' : 'text-slate-400'}`}
-              title="Eye-care Sepia"
+              className={`p-1 rounded ${readerTheme === 'sepia' ? 'bg-[#ebdcb9] font-bold text-amber-900' : 'text-schola-muted'}`}
+              title="Sepia Eye-Care Mode"
             >
               <Eye className="w-3 h-3" />
             </button>
             <button
               onClick={() => setReaderTheme('dark')}
-              className={`p-1 rounded ${readerTheme === 'dark' ? 'bg-slate-900 text-sky-300' : 'text-slate-400'}`}
-              title="Night Dark"
+              className={`p-1 rounded ${readerTheme === 'dark' ? 'bg-slate-800 text-sky-300 font-bold' : 'text-schola-muted'}`}
+              title="Night Mode"
             >
               <Moon className="w-3 h-3" />
             </button>
           </div>
 
-          {/* ARC Action Pill */}
+          {/* Zoom Controls */}
+          <div className="hidden sm:flex items-center space-x-1 font-mono text-xs">
+            <button 
+              onClick={() => setZoomLevel(Math.max(60, zoomLevel - 15))}
+              className="p-1 hover:text-schola-arc transition cursor-pointer"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-[11px] w-10 text-center">{zoomLevel}%</span>
+            <button 
+              onClick={() => setZoomLevel(Math.min(160, zoomLevel + 15))}
+              className="p-1 hover:text-schola-arc transition cursor-pointer"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* ARC AI Action */}
           {onOpenSummaryModal && (
             <button
               onClick={onOpenSummaryModal}
-              className="flex items-center space-x-1 px-2.5 py-1 rounded bg-schola-arc hover:bg-schola-arcHover text-white text-[11px] font-semibold transition cursor-pointer"
-              title="Open ARC AI Synthesis"
+              className="flex items-center space-x-1 px-3 py-1 rounded-md bg-schola-arc hover:bg-schola-arcHover text-white text-xs font-semibold shadow-2xs transition cursor-pointer"
+              title="ARC AI Summary"
             >
-              <Sparkles className="w-3 h-3" />
-              <span className="hidden sm:inline">ARC Notes</span>
+              <Sparkles className="w-3 h-3 text-emerald-200" />
+              <span>ARC Notes</span>
             </button>
           )}
 
-          {/* Download */}
+          {/* Download PDF */}
           <button
             onClick={handleDownload}
             disabled={downloading}
-            className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
-            title="Download PDF"
+            className="p-1.5 rounded-md hover:bg-schola-subtle transition cursor-pointer"
+            title="Save file"
           >
             <Download className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Print */}
-          <button
-            onClick={() => window.print()}
-            className="p-1 text-slate-400 hover:text-white transition hidden sm:inline"
-            title="Print"
-          >
-            <Printer className="w-3.5 h-3.5" />
           </button>
 
           {/* Bookmark */}
           <button
             onClick={() => onBookmark(paper)}
-            className={`p-1 text-slate-400 hover:text-white transition ${isBookmarked ? 'text-amber-400' : ''}`}
-            title={isBookmarked ? "Bookmarked" : "Bookmark"}
+            className={`p-1.5 rounded-md hover:bg-schola-subtle transition cursor-pointer ${isBookmarked ? 'text-schola-arc' : ''}`}
+            title="Bookmark"
           >
             <Bookmark className="w-3.5 h-3.5 fill-current" />
           </button>
 
-          {/* External tab */}
+          {/* Print */}
+          <button
+            onClick={() => window.print()}
+            className="p-1.5 rounded-md hover:bg-schola-subtle transition hidden md:inline cursor-pointer"
+            title="Print Document"
+          >
+            <Printer className="w-3.5 h-3.5" />
+          </button>
+
+          {/* External portal link */}
           {pdfUrl && (
             <a
               href={pdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1 text-slate-400 hover:text-white transition"
-              title="Open in external browser tab"
+              className="p-1.5 rounded-md hover:bg-schola-subtle transition"
+              title="Open direct file link"
             >
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
@@ -221,38 +226,62 @@ export const InAppReader: React.FC<InAppReaderProps> = ({
 
       </div>
 
-      {/* Main Document Frame */}
-      <div className="flex-1 w-full h-full bg-[#525659] relative flex items-center justify-center overflow-auto p-2 sm:p-4">
-        {pdfUrl ? (
+      {/* Main Stretching Reading Canvas */}
+      <div className="flex-1 w-full h-full overflow-y-auto p-4 sm:p-8 flex items-start justify-center relative">
+        
+        {/* Ambient Watermark */}
+        <div 
+          className="fixed inset-0 bg-no-repeat bg-center bg-contain opacity-[0.024] pointer-events-none z-0"
+          style={{ backgroundImage: `url('/logo.png')` }}
+        />
+
+        {/* 1. Markdown & Word Document Render Engine */}
+        {activeDoc && (activeDoc.type === 'markdown' || activeDoc.type === 'word') ? (
           <div 
-            className="w-full h-full max-w-4xl bg-white shadow-2xl rounded-sm overflow-hidden transition-all duration-300"
-            style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
-          >
-            <iframe
-              src={pdfUrl}
-              title={paper.title}
-              className={`w-full h-full border-none transition-all duration-300 ${getViewerStyle()}`}
-            />
+            className="w-full max-w-4xl bg-white p-6 sm:p-12 rounded-xl shadow-xs border border-schola-border relative z-10 leading-relaxed font-serif prose prose-slate max-w-none"
+            style={{ fontSize: `${(zoomLevel / 100) * 16}px` }}
+            dangerouslySetInnerHTML={{ __html: activeDoc.content || "" }}
+          />
+        ) : activeDoc && activeDoc.type === 'text' ? (
+          /* 2. Plain Text / Code / BibTeX Engine */
+          <div className="w-full max-w-4xl bg-white p-6 sm:p-10 rounded-xl shadow-xs border border-schola-border relative z-10">
+            <pre className="font-mono text-xs sm:text-sm whitespace-pre-wrap leading-relaxed overflow-x-auto">
+              {activeDoc.content}
+            </pre>
           </div>
         ) : (
-          <div className="text-center p-8 max-w-md bg-white rounded-xl shadow-lg border border-schola-border">
-            <h3 className="font-serif text-lg font-bold text-schola-text mb-2">Direct Viewer Unavailable</h3>
-            <p className="text-xs text-schola-muted mb-4">
-              Some publishers restrict iframe embedding. You can read the synthesized ARC AI Summary or open via the publisher portal.
-            </p>
-            {paper.landingPageUrl && (
-              <a
-                href={paper.landingPageUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-schola-arc hover:bg-schola-arcHover text-white text-xs font-semibold shadow-xs transition"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>Open via Publisher Portal</span>
-              </a>
+          /* 3. PDF Frame Engine */
+          <div 
+            className="w-full max-w-5xl h-[calc(100vh-8rem)] bg-white shadow-md rounded-xl overflow-hidden border border-schola-border relative z-10 transition-transform duration-200"
+            style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
+          >
+            {pdfUrl ? (
+              <iframe
+                src={pdfUrl}
+                title={docTitle}
+                className={`w-full h-full border-none transition-all duration-300 ${getViewerStyle()}`}
+              />
+            ) : (
+              <div className="text-center p-12 max-w-md mx-auto">
+                <FileText className="w-12 h-12 text-schola-arc mx-auto mb-3" />
+                <h3 className="font-serif text-lg font-bold text-schola-text mb-2">
+                  Ready to Read
+                </h3>
+                <p className="text-xs text-schola-muted mb-5 leading-relaxed">
+                  Open an open-access PDF from the library, or tap <strong>Open File</strong> to load any local PDF, Word (.docx), or Markdown file.
+                </p>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-schola-arc text-white text-xs font-semibold shadow-2xs hover:bg-schola-arcHover transition cursor-pointer"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Choose Local File to Read</span>
+                </button>
+              </div>
             )}
           </div>
         )}
+
       </div>
 
     </div>

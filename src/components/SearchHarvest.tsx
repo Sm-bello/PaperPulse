@@ -6,7 +6,8 @@ import {
   FileSpreadsheet, 
   Archive, 
   Layers, 
-  Filter
+  Filter,
+  Upload
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { Paper } from '../types';
@@ -24,6 +25,7 @@ interface SearchHarvestProps {
   onToggleBookmark: (paper: Paper) => void;
   onSelectPaper?: (paper: Paper) => void;
   onHarvested?: (papers: Paper[]) => void;
+  onOpenFile?: (file: File) => void;
   selectedPaperId?: string;
   bookmarkedIds: Set<string>;
   targetDirHandle: any;
@@ -44,6 +46,7 @@ export const SearchHarvest: React.FC<SearchHarvestProps> = ({
   onToggleBookmark,
   onSelectPaper,
   onHarvested,
+  onOpenFile,
   selectedPaperId,
   bookmarkedIds,
   targetDirHandle,
@@ -234,15 +237,32 @@ export const SearchHarvest: React.FC<SearchHarvestProps> = ({
 
             </div>
 
-            <div className="text-[11px] font-mono text-schola-muted flex items-center space-x-1">
-              {targetDirHandle ? (
-                <span className="text-emerald-700 flex items-center space-x-1">
-                  <FolderCheck className="w-3 h-3" />
-                  <span>Linked: {targetDirHandle.name}</span>
-                </span>
-              ) : (
-                <span>Downloads / Mobile ZIP</span>
-              )}
+            <div className="flex items-center space-x-2">
+              <label className="flex items-center space-x-1.5 px-3 py-1 rounded-md border border-schola-border bg-schola-panel hover:bg-schola-subtle text-schola-text text-xs font-medium cursor-pointer transition">
+                <Upload className="w-3.5 h-3.5 text-schola-arc" />
+                <span className="hidden sm:inline">Open Document (.pdf, .docx, .md, .txt)</span>
+                <span className="sm:hidden">Open File</span>
+                <input
+                  type="file"
+                  accept=".pdf,.md,.markdown,.docx,.txt,.csv,.json,.py,.tex,.bib"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f && onOpenFile) onOpenFile(f);
+                  }}
+                />
+              </label>
+
+              <div className="text-[11px] font-mono text-schola-muted flex items-center space-x-1">
+                {targetDirHandle ? (
+                  <span className="text-emerald-700 flex items-center space-x-1">
+                    <FolderCheck className="w-3 h-3" />
+                    <span>Linked: {targetDirHandle.name}</span>
+                  </span>
+                ) : (
+                  <span>Downloads / Mobile ZIP</span>
+                )}
+              </div>
             </div>
 
           </div>

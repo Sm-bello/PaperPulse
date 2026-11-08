@@ -120,6 +120,25 @@ export const App: React.FC = () => {
     }
   };
 
+  // Open Any Local Document (.pdf, .docx, .md, .txt)
+  const handleOpenFile = (file: File) => {
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'doc';
+    const tempPaper: Paper = {
+      id: `local-${Date.now()}`,
+      doi: '',
+      title: file.name,
+      publicationYear: new Date().getFullYear(),
+      citedByCount: 0,
+      authors: [user?.displayName || 'Local Researcher'],
+      venue: ext.toUpperCase() + ' Document',
+      type: ext,
+      pdfUrl: ext === 'pdf' ? URL.createObjectURL(file) : undefined,
+      abstract: `Local ${ext.toUpperCase()} document: ${file.name} (${Math.round(file.size / 1024)} KB). Available for relaxed reading and ARC AI synthesis.`,
+    };
+    setSelectedPaper(tempPaper);
+    setIsReadingMode(true);
+  };
+
   const bookmarkedIds = new Set(savedPapers.map(p => p.id));
 
   return (
@@ -211,6 +230,7 @@ export const App: React.FC = () => {
                     setIsDetailsOpen(true);
                   }}
                   onHarvested={(p) => setHarvestedPapers(p)}
+                  onOpenFile={handleOpenFile}
                   selectedPaperId={selectedPaper?.id}
                   bookmarkedIds={bookmarkedIds}
                   targetDirHandle={targetDirHandle}
