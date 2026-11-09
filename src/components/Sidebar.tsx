@@ -11,7 +11,8 @@ import {
   CheckCircle2, 
   X, 
   Plus, 
-  Trash2 
+  Trash2,
+  HelpCircle
 } from 'lucide-react';
 import type { Paper, CustomFolder } from '../types';
 
@@ -25,6 +26,7 @@ interface SidebarProps {
   historyCount: number;
   isOpen: boolean;
   onCloseMobile?: () => void;
+  onOpenTour?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -37,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   historyCount,
   isOpen,
   onCloseMobile,
+  onOpenTour,
 }) => {
   const [customFolders, setCustomFolders] = useState<CustomFolder[]>([]);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
@@ -243,6 +246,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Bottom Folder Linking & Mobile Offline Pill */}
       <div className="p-3 border-t border-schola-border bg-schola-panel/80 space-y-2">
+        {onOpenTour && (
+          <button
+            onClick={onOpenTour}
+            className="w-full flex items-center justify-center space-x-1.5 py-1.5 text-xs text-schola-text font-medium transition border border-schola-border rounded-lg bg-white hover:bg-schola-subtle cursor-pointer shadow-2xs"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-schola-arc" />
+            <span>How to Use THE SCHOLA</span>
+          </button>
+        )}
+
         <button
           onClick={onSelectTargetDir}
           className="w-full flex items-center justify-center space-x-1.5 py-2 text-xs text-schola-text font-medium transition border border-schola-border rounded-lg bg-white hover:bg-schola-subtle cursor-pointer shadow-2xs"

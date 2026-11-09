@@ -12,6 +12,7 @@ import { DownloadsAndHistory } from './components/DownloadsAndHistory';
 import { ArcAIChatWorkspace } from './components/ArcAIChatWorkspace';
 import { OfflineApkBanner } from './components/OfflineApkBanner';
 import { GoogleSignInModal } from './components/GoogleSignInModal';
+import { TutorialGuideModal } from './components/TutorialGuideModal';
 
 export const FEATURED_PAPERS: Paper[] = [
   {
@@ -89,6 +90,27 @@ export const App: React.FC = () => {
 
   // Interactive ARC AI Paper Chat workspace state
   const [isArcChatOpen, setIsArcChatOpen] = useState<boolean>(false);
+
+  // Platform Tutorial Guide state
+  const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
+
+  // Detect whether running in native Capacitor APK or web browser
+  const isNativeApp = typeof window !== 'undefined' && Boolean(
+    (window as any).Capacitor?.isNativePlatform?.() || 
+    window.location.protocol === 'capacitor:' || 
+    window.navigator.userAgent.includes('Capacitor')
+  );
+
+  // First-time visitor tour trigger
+  useEffect(() => {
+    try {
+      const completed = localStorage.getItem('theschola_tutorial_completed');
+      if (!completed) {
+        const timer = setTimeout(() => setIsTourOpen(true), 1200);
+        return () => clearTimeout(timer);
+      }
+    } catch {}
+  }, []);
 
   // Harvested papers store
   const [harvestedPapers, setHarvestedPapers] = useState<Paper[]>([]);
@@ -258,6 +280,7 @@ export const App: React.FC = () => {
         }}
         onOpenGoogleSignIn={() => setIsGoogleModalOpen(true)}
         onOpenArcAI={() => setIsArcChatOpen(true)}
+        onOpenTour={() => setIsTourOpen(true)}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         isSidebarOpen={isSidebarOpen}
         savedCount={savedPapers.length}
@@ -297,13 +320,14 @@ export const App: React.FC = () => {
           downloadedCount={downloadedPapers.length}
           historyCount={historyCount}
           isOpen={isSidebarOpen}
+          onOpenTour={() => setIsTourOpen(true)}
           onCloseMobile={() => {
             if (window.innerWidth < 768) setIsSidebarOpen(false);
           }}
         />
 
         {/* Center Column: Relaxed & Stretching Document Workspace */}
-        <main className="flex-1 flex flex-col overflow-y-auto bg-schola-bg relative transition-all duration-300">
+        <main className="flex-1 flex flex-col overflow-y-auto bg-schola-bg relative transition-all duration-300 pb-20 md:pb-8">
           
           {isReadingMode && selectedPaper ? (
             <InAppReader
@@ -374,10 +398,12 @@ export const App: React.FC = () => {
                 />
               )}
 
-              {/* Sweet Section: Offline Mobile APK Banner */}
-              <div className="pt-4">
-                <OfflineApkBanner />
-              </div>
+              {/* Sweet Section: Offline Mobile APK Banner (Only shown on public web Harvest tab, never in Shelf or inside native APK) */}
+              {!isNativeApp && activeTab === 'Harvest' && activeFolder === 'Discovery & Harvest' && (
+                <div className="pt-4">
+                  <OfflineApkBanner />
+                </div>
+              )}
 
             </div>
           )}
@@ -414,6 +440,16 @@ export const App: React.FC = () => {
         isOpen={isGoogleModalOpen}
         onClose={() => setIsGoogleModalOpen(false)}
         onSelectAccount={handleSelectAccount}
+      />
+
+      {/* Platform Interactive Tour & User Guide */}
+      <TutorialGuideModal
+        isOpen={isTourOpen}
+        onClose={() => setIsTourOpen(false)}
+        onNavigateToTab={(tab) => {
+          setActiveTab(tab);
+          setIsTourOpen(false);
+        }}
       />
 
     </div>

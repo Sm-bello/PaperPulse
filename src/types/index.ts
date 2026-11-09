@@ -3,10 +3,14 @@ export interface Paper {
   doi: string;
   title: string;
   publicationYear: number;
+  year?: number;
   citedByCount: number;
+  citationCount?: number;
   authors: string[];
   venue: string;
+  journal?: string;
   type: string;
+  categories?: string[];
   volume?: string;
   issue?: string;
   pages?: string;

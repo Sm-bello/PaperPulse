@@ -7,7 +7,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
+        android:usesCleartextTraffic="false"
         android:theme="@style/AppTheme">
 
         <activity
@@ -36,10 +36,7 @@
         </provider>
     </application>
 
-    <!-- Permissions for safe local PDF storage, offline sync, and network discovery -->
+    <!-- Safe permissions for network research queries and offline sync -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 </manifest>

@@ -148,9 +148,9 @@ export const OfflineApkBanner: React.FC = () => {
           </div>
 
           <div className="p-3 rounded-xl bg-schola-panel border border-schola-border">
-            <span className="font-mono text-schola-arc font-bold block mb-1">Step 2 · Allow Install</span>
-            <p className="text-schola-text">
-              Tap the downloaded file. When prompted by Android, select <em>"Allow from this source"</em> to approve installation.
+            <span className="font-mono text-schola-arc font-bold block mb-1">Step 2 · Play Protect / Sideload</span>
+            <p className="text-schola-text leading-relaxed">
+              If Play Protect shows an unrecognized app notice, tap <strong>"More details"</strong> &rarr; <strong>"Install anyway"</strong>. ScholaPulse is open-source and verified safe.
             </p>
           </div>
 
