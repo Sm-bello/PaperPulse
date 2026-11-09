@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Paper, AISummary, UserProfile } from './types';
+import type { Paper, AISummary, UserProfile, HistoryEntry } from './types';
 import { subscribeToAuth, saveUserSession } from './services/firebase';
 import { getPaperSummary } from './services/aiSummarizer';
 import { Navbar } from './components/Navbar';
@@ -8,7 +8,8 @@ import { PaperDetailsPanel } from './components/PaperDetailsPanel';
 import { SearchHarvest } from './components/SearchHarvest';
 import { Bookshelf } from './components/Bookshelf';
 import { InAppReader } from './components/InAppReader';
-import { AISummaryModal } from './components/AISummaryModal';
+import { DownloadsAndHistory } from './components/DownloadsAndHistory';
+import { ArcAIChatWorkspace } from './components/ArcAIChatWorkspace';
 import { OfflineApkBanner } from './components/OfflineApkBanner';
 import { GoogleSignInModal } from './components/GoogleSignInModal';
 
@@ -69,9 +70,11 @@ export const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isGoogleModalOpen, setIsGoogleModalOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>('Library');
-  const [activeFolder, setActiveFolder] = useState<string>('Unlinked Papers');
+  const [activeFolder, setActiveFolder] = useState<string>('Library');
   const [targetDirHandle, setTargetDirHandle] = useState<any>(null);
   const [savedPapers, setSavedPapers] = useState<Paper[]>([]);
+  const [downloadedPapers, setDownloadedPapers] = useState<Paper[]>([]);
+  const [historyCount, setHistoryCount] = useState<number>(0);
   
   // Responsive sidebar & details states matching screenshot workspace
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(window.innerWidth >= 1024);
@@ -84,27 +87,40 @@ export const App: React.FC = () => {
   // In-App Reader view state (defaults to true for relaxed reading workspace)
   const [isReadingMode, setIsReadingMode] = useState<boolean>(true);
 
-  // Pre-Read / ARC Summary Modal state
-  const [summaryPaper, setSummaryPaper] = useState<Paper | null>(null);
-  const [modalSummary, setModalSummary] = useState<AISummary | null>(null);
+  // Interactive ARC AI Paper Chat workspace state
+  const [isArcChatOpen, setIsArcChatOpen] = useState<boolean>(false);
 
   // Harvested papers store
   const [harvestedPapers, setHarvestedPapers] = useState<Paper[]>([]);
 
-  // Load saved shelf from localStorage
-  useEffect(() => {
+  // Load and synchronize storage data (shelf, downloads, history)
+  const loadStorageData = () => {
     try {
       const stored = localStorage.getItem("theschola_shelf") || localStorage.getItem("paperpulse_shelf");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setSavedPapers(parsed);
-      }
+      if (stored) setSavedPapers(JSON.parse(stored));
+      
+      const dlRaw = localStorage.getItem("theschola_downloads");
+      if (dlRaw) setDownloadedPapers(JSON.parse(dlRaw));
+
+      const histRaw = localStorage.getItem("theschola_history");
+      if (histRaw) setHistoryCount(JSON.parse(histRaw).length);
+
+      const userRaw = localStorage.getItem("theschola_user");
+      if (userRaw && !user) setUser(JSON.parse(userRaw));
     } catch {}
+  };
+
+  useEffect(() => {
+    loadStorageData();
+    window.addEventListener('scholapulse_storage_updated', loadStorageData);
+    return () => window.removeEventListener('scholapulse_storage_updated', loadStorageData);
   }, []);
 
   // Subscribe to Firebase Auth / Local session
   useEffect(() => {
-    const unsubscribe = subscribeToAuth((u) => setUser(u));
+    const unsubscribe = subscribeToAuth((u) => {
+      if (u) setUser(u);
+    });
     return () => unsubscribe();
   }, []);
 
@@ -120,6 +136,7 @@ export const App: React.FC = () => {
     setSavedPapers(papers);
     try {
       localStorage.setItem("theschola_shelf", JSON.stringify(papers));
+      window.dispatchEvent(new Event('scholapulse_storage_updated'));
     } catch {}
   };
 
@@ -133,18 +150,27 @@ export const App: React.FC = () => {
     }
   };
 
-  // Open Full In-App Reader
+  // Open Full In-App Reader and log reading history
   const handleReadPaper = (paper: Paper) => {
     setSelectedPaper(paper);
     setIsReadingMode(true);
-  };
 
-  // Open ARC Summary Modal
-  const handleOpenSummary = async (paper: Paper) => {
-    setSummaryPaper(paper);
-    setModalSummary(null);
-    const sum = await getPaperSummary(paper);
-    setModalSummary(sum);
+    try {
+      const rawHist = localStorage.getItem('theschola_history') || '[]';
+      const hist: HistoryEntry[] = JSON.parse(rawHist);
+      const filtered = hist.filter(h => h.paper.id !== paper.id);
+      const updated: HistoryEntry[] = [
+        {
+          id: `hist-${Date.now()}`,
+          paper,
+          readAt: new Date().toISOString()
+        },
+        ...filtered
+      ];
+      localStorage.setItem('theschola_history', JSON.stringify(updated.slice(0, 50)));
+      setHistoryCount(updated.length);
+      window.dispatchEvent(new Event('scholapulse_storage_updated'));
+    } catch {}
   };
 
   // Handle Account Selection from Google Sign-In Modal
@@ -185,11 +211,20 @@ export const App: React.FC = () => {
       pdfUrl: ext === 'pdf' ? URL.createObjectURL(file) : undefined,
       abstract: `Local ${ext.toUpperCase()} document: ${file.name} (${Math.round(file.size / 1024)} KB). Available for relaxed reading and ARC AI synthesis.`,
     };
-    setSelectedPaper(tempPaper);
-    setIsReadingMode(true);
+    handleReadPaper(tempPaper);
   };
 
   const bookmarkedIds = new Set(savedPapers.map(p => p.id));
+
+  // Combined pool of available papers for ARC AI context switching
+  const allAvailablePapers = Array.from(
+    new Map([
+      [selectedPaper.id, selectedPaper],
+      ...savedPapers.map(p => [p.id, p] as [string, Paper]),
+      ...downloadedPapers.map(p => [p.id, p] as [string, Paper]),
+      ...harvestedPapers.map(p => [p.id, p] as [string, Paper]),
+    ]).values()
+  );
 
   return (
     <div className="min-h-screen bg-schola-bg text-schola-text flex flex-col font-sans relative overflow-x-hidden">
@@ -210,21 +245,23 @@ export const App: React.FC = () => {
             setActiveFolder('My Saved Shelf');
             setIsReadingMode(false);
           } else if (tab === 'Harvest') {
-            setActiveFolder('Unlinked Papers');
+            setActiveFolder('Discovery & Harvest');
+            setIsReadingMode(false);
+          } else if (tab === 'Downloads') {
+            setActiveFolder('Downloads');
             setIsReadingMode(false);
           } else if (tab === 'Library') {
+            setActiveFolder('Library');
             setIsReadingMode(true);
             if (window.innerWidth >= 1200) setIsDetailsOpen(true);
           }
         }}
         onOpenGoogleSignIn={() => setIsGoogleModalOpen(true)}
-        onOpenArcAI={() => {
-          if (selectedPaper) handleOpenSummary(selectedPaper);
-          else if (savedPapers[0]) handleOpenSummary(savedPapers[0]);
-        }}
+        onOpenArcAI={() => setIsArcChatOpen(true)}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         isSidebarOpen={isSidebarOpen}
         savedCount={savedPapers.length}
+        downloadedCount={downloadedPapers.length}
       />
 
       {/* Main Spacious & Responsive Research Workspace */}
@@ -235,12 +272,30 @@ export const App: React.FC = () => {
           activeFolder={activeFolder}
           onSelectFolder={(folder) => {
             setActiveFolder(folder);
-            setIsReadingMode(false);
+            if (folder === 'Library') {
+              setActiveTab('Library');
+              setIsReadingMode(true);
+              if (window.innerWidth >= 1200) setIsDetailsOpen(true);
+            } else if (folder === 'Discovery & Harvest') {
+              setActiveTab('Harvest');
+              setIsReadingMode(false);
+            } else if (folder === 'Downloads' || folder === 'History') {
+              setActiveTab('Downloads');
+              setIsReadingMode(false);
+            } else if (folder === 'My Saved Shelf') {
+              setActiveTab('Shelf');
+              setIsReadingMode(false);
+            } else {
+              // Custom folder
+              setActiveTab('Shelf');
+              setIsReadingMode(false);
+            }
           }}
           targetDirHandle={targetDirHandle}
           onSelectTargetDir={handleSelectTargetDir}
           savedPapers={savedPapers}
-          harvestedPapers={harvestedPapers}
+          downloadedCount={downloadedPapers.length}
+          historyCount={historyCount}
           isOpen={isSidebarOpen}
           onCloseMobile={() => {
             if (window.innerWidth < 768) setIsSidebarOpen(false);
@@ -256,15 +311,35 @@ export const App: React.FC = () => {
               onBack={() => setIsReadingMode(false)}
               onBookmark={() => handleToggleBookmark(selectedPaper)}
               isBookmarked={bookmarkedIds.has(selectedPaper.id)}
-              onOpenSummaryModal={() => handleOpenSummary(selectedPaper)}
+              onOpenSummaryModal={() => setIsArcChatOpen(true)}
             />
           ) : (
             <div className="w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-10 space-y-8">
               
-              {activeFolder === 'My Saved Shelf' || activeTab === 'Shelf' ? (
+              {/* Downloads & Reading History View */}
+              {activeTab === 'Downloads' || activeFolder === 'Downloads' || activeFolder === 'History' ? (
+                <DownloadsAndHistory
+                  onReadPaper={handleReadPaper}
+                  onOpenArcAI={(p) => {
+                    setSelectedPaper(p);
+                    setIsArcChatOpen(true);
+                  }}
+                  onBookmark={handleToggleBookmark}
+                  bookmarkedIds={bookmarkedIds}
+                  onExplore={() => {
+                    setActiveFolder('Discovery & Harvest');
+                    setActiveTab('Harvest');
+                    setIsReadingMode(false);
+                  }}
+                />
+              ) : activeFolder === 'My Saved Shelf' || activeTab === 'Shelf' ? (
+                /* My Saved Shelf */
                 <Bookshelf
                   savedPapers={savedPapers}
-                  onOpenSummary={handleOpenSummary}
+                  onOpenSummary={(p) => {
+                    setSelectedPaper(p);
+                    setIsArcChatOpen(true);
+                  }}
                   onReadPaper={handleReadPaper}
                   onRemoveBookmark={handleToggleBookmark}
                   onSelectPaper={(p) => {
@@ -273,13 +348,17 @@ export const App: React.FC = () => {
                   }}
                   selectedPaperId={selectedPaper?.id}
                   onExplore={() => {
-                    setActiveFolder('Unlinked Papers');
-                    setActiveTab('Library');
+                    setActiveFolder('Discovery & Harvest');
+                    setActiveTab('Harvest');
                   }}
                 />
               ) : (
+                /* Literature Discovery & Search Harvest */
                 <SearchHarvest
-                  onOpenSummary={handleOpenSummary}
+                  onOpenSummary={(p) => {
+                    setSelectedPaper(p);
+                    setIsArcChatOpen(true);
+                  }}
                   onReadPaper={handleReadPaper}
                   onToggleBookmark={handleToggleBookmark}
                   onSelectPaper={(p) => {
@@ -309,28 +388,28 @@ export const App: React.FC = () => {
         <PaperDetailsPanel
           paper={selectedPaper}
           summary={selectedSummary}
-          onOpenSummaryModal={() => selectedPaper && handleOpenSummary(selectedPaper)}
-          onReadPaper={() => selectedPaper && handleReadPaper(selectedPaper)}
-          onBookmark={() => selectedPaper && handleToggleBookmark(selectedPaper)}
+          onOpenSummaryModal={() => setIsArcChatOpen(true)}
+          onReadPaper={() => handleReadPaper(selectedPaper)}
+          onBookmark={() => handleToggleBookmark(selectedPaper)}
           onClose={() => setIsDetailsOpen(false)}
-          isBookmarked={selectedPaper ? bookmarkedIds.has(selectedPaper.id) : false}
+          isBookmarked={bookmarkedIds.has(selectedPaper.id)}
           isOpen={isDetailsOpen}
         />
 
       </div>
 
-      {/* Pre-Read / ARC Summary Modal */}
-      {summaryPaper && (
-        <AISummaryModal
-          paper={summaryPaper}
-          summary={modalSummary}
-          onClose={() => setSummaryPaper(null)}
+      {/* Interactive ARC AI Paper Chat Workspace */}
+      {isArcChatOpen && (
+        <ArcAIChatWorkspace
+          paper={selectedPaper}
+          availablePapers={allAvailablePapers}
+          onSelectPaper={(p) => setSelectedPaper(p)}
+          onClose={() => setIsArcChatOpen(false)}
           onReadPaper={handleReadPaper}
-          onUpdateSummary={(newSummary) => setModalSummary(newSummary)}
         />
       )}
 
-      {/* Google Sign-In Native Account Picker Modal */}
+      {/* Google Sign-In Native Account Picker & Research Domain Modal */}
       <GoogleSignInModal
         isOpen={isGoogleModalOpen}
         onClose={() => setIsGoogleModalOpen(false)}

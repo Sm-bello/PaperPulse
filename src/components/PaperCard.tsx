@@ -36,18 +36,22 @@ export const PaperCard: React.FC<PaperCardProps> = ({
   cachedSummary,
 }) => {
   const [expanded, setExpanded] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [downloadState, setDownloadState] = useState<'idle' | 'fetching' | 'saving' | 'success' | 'redirected' | 'error'>('idle');
+  const [downloadMsg, setDownloadMsg] = useState('');
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setDownloading(true);
-    const success = await downloadSinglePaper(paper, index);
-    setDownloading(false);
-    if (success) {
-      setDownloadSuccess(true);
-      setTimeout(() => setDownloadSuccess(false), 2500);
-    }
+    setDownloadState('fetching');
+    setDownloadMsg('Fetching...');
+    await downloadSinglePaper(paper, index, (status, msg) => {
+      setDownloadState(status);
+      setDownloadMsg(msg);
+    });
+
+    setTimeout(() => {
+      setDownloadState('idle');
+      setDownloadMsg('');
+    }, 3500);
   };
 
   return (
@@ -166,24 +170,32 @@ export const PaperCard: React.FC<PaperCardProps> = ({
           <span>Read</span>
         </button>
 
-        {/* Download PDF */}
+        {/* Download PDF with Smart State */}
         <button
           onClick={handleDownload}
-          disabled={downloading}
+          disabled={downloadState === 'fetching' || downloadState === 'saving'}
           className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-xs font-medium transition cursor-pointer border ${
-            downloadSuccess 
-              ? 'bg-emerald-50 border-emerald-300 text-emerald-700' 
+            downloadState === 'success' 
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-700 font-semibold' 
+              : downloadState === 'fetching' || downloadState === 'saving'
+              ? 'bg-schola-subtle border-schola-border text-schola-arc'
               : 'bg-white hover:bg-schola-subtle border-schola-border text-schola-text'
           }`}
-          title="Download PDF to phone/laptop"
+          title={downloadMsg || "Download PDF to phone/laptop and Shelf"}
         >
-          {downloadSuccess ? (
+          {downloadState === 'success' ? (
             <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+          ) : downloadState === 'fetching' || downloadState === 'saving' ? (
+            <Sparkles className="w-3.5 h-3.5 text-schola-arc animate-spin" />
           ) : (
             <Download className="w-3.5 h-3.5" />
           )}
           <span className="hidden sm:inline">
-            {downloadSuccess ? 'Saved' : downloading ? '...' : 'PDF'}
+            {downloadState === 'success' 
+              ? 'Saved' 
+              : downloadMsg 
+              ? downloadMsg 
+              : 'PDF'}
           </span>
         </button>
 

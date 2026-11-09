@@ -1,4 +1,4 @@
-import type { Paper, AISummary } from "../types";
+import type { Paper, AISummary, ChatMessage } from "../types";
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
@@ -189,4 +189,133 @@ export async function getPaperSummary(
   }
 
   return generateOnlineSummary(paper, apiKey);
+}
+
+/**
+ * Interactive Q&A chat with ARC AI about a specific research paper
+ * Works both Online (Gemini 2.5 Flash) and Offline (Edge Heuristic NLP)
+ */
+export async function askArcPaperQuestion(
+  paper: Paper,
+  question: string,
+  chatHistory: ChatMessage[] = [],
+  apiKey?: string
+): Promise<string> {
+  const activeKey = apiKey || import.meta.env.VITE_GEMINI_API_KEY;
+  const isOnline = navigator.onLine && !!activeKey;
+
+  if (!isOnline) {
+    // Offline heuristic answer extraction
+    const qLower = question.toLowerCase();
+    const fullText = `${paper.title}. ${paper.abstract || ""}`;
+    const sentences = fullText
+      .split(/(?<=[.?!])\s+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 20);
+
+    if (qLower.includes("method") || qLower.includes("how") || qLower.includes("architect") || qLower.includes("model")) {
+      const methodSentences = sentences.filter(s => /propose|method|approach|framework|architecture|design|model|algorithm|experiment/i.test(s));
+      if (methodSentences.length > 0) {
+        return `[Offline Edge NLP Mode]\n\n**Methodology Overview:**\n${methodSentences.slice(0, 3).join(" ")}\n\n*This paper combines specialized empirical analysis with algorithmic formulations in ${paper.venue}.*`;
+      }
+    }
+
+    if (qLower.includes("result") || qLower.includes("finding") || qLower.includes("accuracy") || qLower.includes("benchmark")) {
+      const resultSentences = sentences.filter(s => /result|show|demonstrate|achieve|outperform|accuracy|improve|reduce|increase/i.test(s));
+      if (resultSentences.length > 0) {
+        return `[Offline Edge NLP Mode]\n\n**Key Empirical Findings:**\n${resultSentences.slice(0, 3).join(" ")}\n\n*The findings demonstrate statistically significant gains reported by ${paper.authors[0] || 'the authors'} (${paper.publicationYear}).*`;
+      }
+    }
+
+    if (qLower.includes("limit") || qLower.includes("weak") || qLower.includes("challenge") || qLower.includes("risk")) {
+      const limitSentences = sentences.filter(s => /however|challenge|limit|future|tradeoff|cost|constraint|assumption/i.test(s));
+      if (limitSentences.length > 0) {
+        return `[Offline Edge NLP Mode]\n\n**Identified Limitations:**\n${limitSentences.slice(0, 2).join(" ")}\n\n*The authors note operational constraints under non-idealized experimental settings.*`;
+      }
+      return `[Offline Edge NLP Mode]\n\n**Considerations & Bounds:**\nThe study evaluates performance primarily under the stated conditions in ${paper.venue}. Generalization to unrestricted environments requires further empirical validation.`;
+    }
+
+    if (qLower.includes("tldr") || qLower.includes("summary") || qLower.includes("what is this paper")) {
+      return `[Offline Edge NLP Mode]\n\n**Executive Summary of "${paper.title}":**\n- **Thesis**: ${sentences[0] || paper.title}\n- **Authors**: ${paper.authors.join(", ")} (${paper.publicationYear})\n- **Core Takeaway**: ${sentences[1] || "Offers key advancements in scientific literature."}`;
+    }
+
+    // Keyword scoring for general questions
+    const qWords = qLower.match(/\b[a-z]{3,}\b/g) || [];
+    const scored = sentences.map(s => {
+      let score = 0;
+      const sLower = s.toLowerCase();
+      for (const w of qWords) {
+        if (!STOP_WORDS.has(w) && sLower.includes(w)) score += 1;
+      }
+      return { s, score };
+    }).sort((a, b) => b.score - a.score);
+
+    const bestMatches = scored.filter(item => item.score > 0).slice(0, 3).map(i => i.s);
+    if (bestMatches.length > 0) {
+      return `[Offline Edge NLP Mode]\n\nBased on "${paper.title}":\n\n${bestMatches.join("\n\n")}`;
+    }
+
+    return `[Offline Edge NLP Mode]\n\nRegarding "${question}":\n"${paper.title}" (${paper.publicationYear}) primarily investigates: ${paper.abstract ? paper.abstract.slice(0, 280) + '...' : 'this topic'}. Connect to the internet or add your Gemini API key to unlock full multi-turn conversational synthesis.`;
+  }
+
+  // Online Gemini conversational interrogation
+  const systemInstruction = `You are ARC, an elite academic research copilot and peer reviewer.
+You are having an in-depth conversation with a researcher about the following scientific paper:
+Title: "${paper.title}"
+Authors: ${paper.authors.join(", ")} (${paper.publicationYear})
+Venue: ${paper.venue}
+Abstract/Content:
+${paper.abstract || "No abstract provided."}
+
+Guidelines:
+1. Ground your answers directly in the paper's actual claims, methods, and data.
+2. If the user asks about equations, methodology, or results, provide clear, rigorous academic explanations with formatting (bullet points, bold text).
+3. If information is not in the abstract or provided text, state what can reasonably be inferred and what would require checking the full supplementary materials.
+4. Keep the tone collegial, sharp, and scientifically precise.`;
+
+  const contents: any[] = [
+    { role: "user", parts: [{ text: systemInstruction }] },
+    { role: "model", parts: [{ text: `I am ready. I have fully indexed "${paper.title}" by ${paper.authors[0] || 'the authors'} et al. (${paper.publicationYear}). What would you like to investigate?` }] }
+  ];
+
+  // Append recent chat history (up to last 6 turns)
+  const recentHistory = chatHistory.slice(-6);
+  for (const msg of recentHistory) {
+    contents.push({
+      role: msg.sender === "user" ? "user" : "model",
+      parts: [{ text: msg.text }]
+    });
+  }
+
+  // Append latest question
+  contents.push({
+    role: "user",
+    parts: [{ text: question }]
+  });
+
+  try {
+    const res = await fetch(`${GEMINI_API_URL}?key=${activeKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents,
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 1000,
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Gemini API error: ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!answer) throw new Error("Empty response from AI");
+    return answer;
+  } catch (err) {
+    console.warn("Online ARC Chat error, falling back to offline NLP:", err);
+    return askArcPaperQuestion(paper, question, chatHistory, undefined);
+  }
 }

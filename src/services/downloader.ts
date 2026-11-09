@@ -66,27 +66,110 @@ export async function fetchPdfBlob(url: string): Promise<Blob | null> {
 }
 
 /**
- * Saves a single paper directly to browser Downloads
+ * Records a downloaded paper into local storage so it appears unzipped in Downloads & Shelf
  */
-export async function downloadSinglePaper(paper: Paper, index: number = 1): Promise<boolean> {
-  if (!paper.pdfUrl) return false;
+export function recordDownloadedPaper(paper: Paper, blobUrl?: string): void {
+  try {
+    const raw = localStorage.getItem("theschola_downloads") || "[]";
+    const existing: Paper[] = JSON.parse(raw);
+    const updatedPaper: Paper = {
+      ...paper,
+      savedLocally: true,
+      downloadedAt: new Date().toISOString(),
+      fileBlobUrl: blobUrl || paper.pdfUrl,
+    };
+    
+    // Avoid duplicates
+    const filtered = existing.filter(p => p.id !== paper.id);
+    const newList = [updatedPaper, ...filtered];
+    localStorage.setItem("theschola_downloads", JSON.stringify(newList));
+
+    // Also sync to shelf so it's unzipped and accessible in shelf
+    const shelfRaw = localStorage.getItem("theschola_shelf") || "[]";
+    const shelf: Paper[] = JSON.parse(shelfRaw);
+    if (!shelf.some(p => p.id === paper.id)) {
+      localStorage.setItem("theschola_shelf", JSON.stringify([updatedPaper, ...shelf]));
+    }
+    
+    window.dispatchEvent(new Event("scholapulse_storage_updated"));
+  } catch (err) {
+    console.error("Failed to record downloaded paper:", err);
+  }
+}
+
+/**
+ * Records a batch of papers into local storage as individual unzipped readable entries
+ */
+export function recordBatchDownloadedPapers(papers: Paper[]): void {
+  try {
+    const raw = localStorage.getItem("theschola_downloads") || "[]";
+    const existing: Paper[] = JSON.parse(raw);
+    const shelfRaw = localStorage.getItem("theschola_shelf") || "[]";
+    const shelf: Paper[] = JSON.parse(shelfRaw);
+
+    const now = new Date().toISOString();
+    const updatedPapers = papers.map(p => ({
+      ...p,
+      savedLocally: true,
+      downloadedAt: now,
+    }));
+
+    // Merge into downloads
+    const existingIds = new Set(existing.map(p => p.id));
+    const newDownloads = [...updatedPapers.filter(p => !existingIds.has(p.id)), ...existing];
+    localStorage.setItem("theschola_downloads", JSON.stringify(newDownloads));
+
+    // Merge unzipped papers into shelf
+    const shelfIds = new Set(shelf.map(p => p.id));
+    const newShelf = [...updatedPapers.filter(p => !shelfIds.has(p.id)), ...shelf];
+    localStorage.setItem("theschola_shelf", JSON.stringify(newShelf));
+
+    window.dispatchEvent(new Event("scholapulse_storage_updated"));
+  } catch (err) {
+    console.error("Failed to record batch downloaded papers:", err);
+  }
+}
+
+/**
+ * Saves a single paper directly to browser Downloads with smart status reporting
+ */
+export async function downloadSinglePaper(
+  paper: Paper, 
+  index: number = 1,
+  onStatus?: (status: 'fetching' | 'saving' | 'success' | 'redirected' | 'error', message: string) => void
+): Promise<boolean> {
+  const targetUrl = paper.pdfUrl || paper.landingPageUrl;
+  if (!targetUrl) {
+    onStatus?.('error', 'No open-access link available for this document.');
+    return false;
+  }
   
-  const blob = await fetchPdfBlob(paper.pdfUrl);
-  if (!blob) {
-    // If blocked, open PDF link in a new tab so user can download directly
-    window.open(paper.pdfUrl, "_blank");
-    return true;
+  onStatus?.('fetching', 'Locating and fetching PDF stream...');
+  
+  if (paper.pdfUrl) {
+    const blob = await fetchPdfBlob(paper.pdfUrl);
+    if (blob) {
+      onStatus?.('saving', 'Saving PDF to device and Shelf...');
+      const filename = `${String(index).padStart(3, "0")} ${paper.publicationYear} ${sanitizeName(paper.title)}.pdf`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      recordDownloadedPaper(paper, url);
+      onStatus?.('success', 'Saved to Downloads & Shelf!');
+      return true;
+    }
   }
 
-  const filename = `${String(index).padStart(3, "0")} ${paper.publicationYear} ${sanitizeName(paper.title)}.pdf`;
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // If blob fetch is blocked by CORS/paywall, open publisher portal
+  onStatus?.('redirected', 'Direct PDF stream restricted. Opening official publisher portal...');
+  window.open(targetUrl, "_blank");
+  recordDownloadedPaper(paper);
+  onStatus?.('success', 'Recorded in Downloads & Shelf!');
   return true;
 }
 
@@ -124,8 +207,9 @@ export async function saveToDirectoryHandle(
     }
   }
 
-  // Write Paper List.csv
+  // Write Paper List.csv and record into in-app shelf & downloads
   if (successfullyDownloaded.length > 0) {
+    recordBatchDownloadedPapers(successfullyDownloaded);
     const csvContent = generatePaperListCsv(successfullyDownloaded);
     const csvHandle = await subDir.getFileHandle("Paper List.csv", { create: true });
     const writable = await csvHandle.createWritable();
@@ -167,6 +251,8 @@ export async function downloadBulkAsZip(
   }
 
   if (validPapers.length > 0) {
+    // Record all unzipped individual papers directly into in-app shelf and downloads
+    recordBatchDownloadedPapers(validPapers);
     const csvData = generatePaperListCsv(validPapers);
     folder.file("Paper List.csv", csvData);
   }

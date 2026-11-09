@@ -9,6 +9,7 @@ import {
   Smartphone,
   Layers,
   BookOpen,
+  HardDrive,
   Menu,
   X
 } from 'lucide-react';
@@ -24,6 +25,7 @@ interface NavbarProps {
   onToggleSidebar?: () => void;
   isSidebarOpen?: boolean;
   savedCount: number;
+  downloadedCount: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -35,6 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleSidebar,
   isSidebarOpen,
   savedCount,
+  downloadedCount,
 }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -132,6 +135,25 @@ export const Navbar: React.FC<NavbarProps> = ({
           {savedCount > 0 && (
             <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-schola-border text-schola-text">
               {savedCount}
+            </span>
+          )}
+        </button>
+
+        {/* Downloads & Reading History */}
+        <button
+          onClick={() => setActiveTab('Downloads')}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer font-sans ${
+            activeTab === 'Downloads' 
+              ? 'bg-[#ede5d8] text-schola-text font-bold shadow-2xs border border-[#ddcca8]' 
+              : 'text-schola-muted hover:text-schola-text hover:bg-schola-subtle/50'
+          }`}
+        >
+          <HardDrive className="w-3.5 h-3.5 text-schola-arc" />
+          <span className="hidden sm:inline">Downloads & History</span>
+          <span className="sm:hidden">Downloads</span>
+          {downloadedCount > 0 && (
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-schola-border text-schola-text">
+              {downloadedCount}
             </span>
           )}
         </button>

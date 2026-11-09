@@ -34,6 +34,8 @@ export const PaperDetailsPanel: React.FC<PaperDetailsPanelProps> = ({
   isOpen,
 }) => {
   const [copiedDoi, setCopiedDoi] = useState(false);
+  const [downloadState, setDownloadState] = useState<'idle' | 'fetching' | 'saving' | 'success' | 'redirected' | 'error'>('idle');
+  const [downloadMsg, setDownloadMsg] = useState<string>('');
 
   if (!isOpen || !paper) return null;
 
@@ -43,6 +45,21 @@ export const PaperDetailsPanel: React.FC<PaperDetailsPanelProps> = ({
       setCopiedDoi(true);
       setTimeout(() => setCopiedDoi(false), 2000);
     }
+  };
+
+  const handleDownloadPaper = async () => {
+    if (!paper) return;
+    setDownloadState('fetching');
+    setDownloadMsg('Locating and fetching PDF stream...');
+    await downloadSinglePaper(paper, 1, (status, msg) => {
+      setDownloadState(status);
+      setDownloadMsg(msg);
+    });
+
+    setTimeout(() => {
+      setDownloadState('idle');
+      setDownloadMsg('');
+    }, 4000);
   };
 
   return (
@@ -216,15 +233,40 @@ export const PaperDetailsPanel: React.FC<PaperDetailsPanelProps> = ({
 
       </div>
 
-      {/* Footer Quick Download Action */}
-      <div className="p-4 border-t border-schola-border bg-schola-panel/80">
+      {/* Footer Quick Download Action with Smart State */}
+      <div className="p-4 border-t border-schola-border bg-schola-panel/80 space-y-1.5">
         <button
-          onClick={() => downloadSinglePaper(paper)}
-          className="w-full flex items-center justify-center space-x-2 py-2.5 rounded-xl bg-schola-arc hover:bg-schola-arcHover text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+          onClick={handleDownloadPaper}
+          disabled={downloadState === 'fetching' || downloadState === 'saving'}
+          className={`w-full flex items-center justify-center space-x-2 py-2.5 rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer ${
+            downloadState === 'success'
+              ? 'bg-emerald-600 text-white'
+              : downloadState === 'fetching' || downloadState === 'saving'
+              ? 'bg-schola-subtle border border-schola-border text-schola-text cursor-wait'
+              : 'bg-schola-arc hover:bg-schola-arcHover text-white'
+          }`}
         >
-          <Download className="w-3.5 h-3.5" />
-          <span>Save PDF to Device</span>
+          {downloadState === 'success' ? (
+            <Check className="w-4 h-4 text-white" />
+          ) : downloadState === 'fetching' || downloadState === 'saving' ? (
+            <Sparkles className="w-4 h-4 text-schola-arc animate-spin" />
+          ) : (
+            <Download className="w-3.5 h-3.5" />
+          )}
+          <span>
+            {downloadState === 'success'
+              ? 'Saved to Downloads & Shelf!'
+              : downloadState === 'fetching' || downloadState === 'saving'
+              ? downloadMsg || 'Fetching PDF stream...'
+              : 'Save PDF to Device'}
+          </span>
         </button>
+
+        {downloadMsg && downloadState !== 'idle' && (
+          <p className="text-[11px] text-center text-schola-muted font-mono truncate px-1">
+            {downloadMsg}
+          </p>
+        )}
       </div>
 
     </aside>
