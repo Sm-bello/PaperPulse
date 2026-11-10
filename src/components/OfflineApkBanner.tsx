@@ -18,10 +18,11 @@ export const OfflineApkBanner: React.FC = () => {
 
   const handleDownloadApk = async () => {
     setDownloading(true);
+    setShowInstallGuide(true); // Automatically expand the safe installation guide
     try {
       await downloadLatestApkFromGitHub("Sm-bello", "PaperPulse");
       setDownloadSuccess(true);
-      setTimeout(() => setDownloadSuccess(false), 3500);
+      setTimeout(() => setDownloadSuccess(false), 4000);
     } catch (e) {
       console.error("APK download error:", e);
     } finally {

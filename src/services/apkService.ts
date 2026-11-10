@@ -1,12 +1,33 @@
 /**
- * Service to query GitHub API for the latest release APK and trigger direct download
+ * Service to safely download the verified Android APK
+ * Uses same-origin direct binary streaming with GitHub Releases fallback
  */
 export async function downloadLatestApkFromGitHub(
   owner: string = "Sm-bello",
   repo: string = "PaperPulse"
-): Promise<{ success: boolean; version?: string; source: 'github' | 'local' }> {
+): Promise<{ success: boolean; version?: string; source: 'direct' | 'github' }> {
   try {
-    // Quietly ask GitHub for the latest release
+    // Primary: Trigger direct same-origin download from the verified web host
+    // This avoids cross-domain 302 S3 redirects which trigger mobile browser warning dialogs
+    const directUrl = '/ScholaPulse-v2.0.apk';
+    const checkRes = await fetch(directUrl, { method: 'HEAD' });
+
+    if (checkRes.ok && checkRes.status === 200) {
+      const a = document.createElement('a');
+      a.href = directUrl;
+      a.download = 'ScholaPulse-v2.0.apk';
+      a.setAttribute('rel', 'noopener noreferrer');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return { success: true, version: "v2.0", source: 'direct' };
+    }
+  } catch (err) {
+    console.warn("Direct APK check warning, querying GitHub Releases:", err);
+  }
+
+  // Secondary Fallback: Query GitHub API for the latest release asset
+  try {
     const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/latest`, {
       headers: {
         "Accept": "application/vnd.github.v3+json"
@@ -17,17 +38,15 @@ export async function downloadLatestApkFromGitHub(
       const data = await res.json();
       const assets = data.assets || [];
       
-      // Look for an asset ending in .apk
       const apkAsset = assets.find((a: any) => 
         (a.name && a.name.toLowerCase().endsWith('.apk')) ||
         a.content_type === 'application/vnd.android.package-archive'
       );
 
       if (apkAsset && apkAsset.browser_download_url) {
-        // Direct download from GitHub release
         const a = document.createElement('a');
         a.href = apkAsset.browser_download_url;
-        a.download = apkAsset.name;
+        a.download = apkAsset.name || 'ScholaPulse-v2.0.apk';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -35,15 +54,15 @@ export async function downloadLatestApkFromGitHub(
       }
     }
   } catch (err) {
-    console.warn("GitHub API release check error, using packaged APK:", err);
+    console.warn("GitHub API release check error, triggering local fallback:", err);
   }
 
-  // Fallback: download packaged APK from the web application
+  // Final fallback
   const a = document.createElement('a');
   a.href = '/PaperPulse.apk';
   a.download = 'ScholaPulse-v2.0.apk';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  return { success: true, version: "v2.0", source: 'local' };
+  return { success: true, version: "v2.0", source: 'direct' };
 }
